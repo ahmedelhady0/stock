@@ -22,7 +22,7 @@ export const auth = getAuth(app);
 export const storage = getStorage(app);
 
 // appId مختلف عن نظام التقارير القديم — عشان منعملش تعارض بيانات
-export const appId = 'default-app-id';
+export const appId = 'exo-warehouse-system';
 export const adminUsername = "admin";
 
 // ═══════════════════════════════════════════════════════════
