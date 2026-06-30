@@ -118,21 +118,25 @@ function loadLiveProjects() {
 }
 
 // ── 2. إدارة المواد ─────────────────────────────────────────
+// ── 2. إدارة المواد (النسخة المصلحة والمطابقة للـ HTML لديك) ─────────────────
 addMaterialForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const nameInput = document.getElementById('newMaterialName');
-    const phaseSelect = document.getElementById('materialPhase');
     const unitInput = document.getElementById('materialUnit');
 
     const name = nameInput.value.trim();
-    const phase = phaseSelect.value;
     const unit = unitInput.value.trim();
 
-    if (!name || !phase || !unit) return;
+    // نتحقق من الحقول المتاحة لديك فقط في التصميم
+    if (!name || !unit) {
+        showMessage('⚠️ يرجى ملء اسم المادة والوحدة أولاً');
+        return;
+    }
 
     try {
         await addDoc(collection(db, `artifacts/${appId}/public/data/materials`), {
-            name, phase, unit,
+            name,
+            unit,
             createdAt: new Date()
         });
         showMessage('📦 تم إضافة المادة بنجاح!');
@@ -141,7 +145,7 @@ addMaterialForm?.addEventListener('submit', async (e) => {
         setTimeout(() => hideMessage(), 1200);
     } catch (err) {
         console.error(err);
-        showMessage('❌ فشل الحفظ: حسابك لا يملك صلاحية الأدمن في Firestore Rules بعد!');
+        showMessage('❌ فشل حفظ المادة: ' + err.message);
     }
 });
 
@@ -155,11 +159,11 @@ function loadLiveMaterials() {
         snapshot.forEach(d => {
             const data = d.data();
             const item = document.createElement('div');
-            item.className = 'admin-panel-item p-3 flex justify-between items-center';
+            item.className = 'admin-panel-item p-3 flex justify-between items-center bg-white my-1 rounded shadow-sm';
             item.innerHTML = `
                 <div class="flex flex-col">
                     <span class="text-sm font-bold text-indigo-900">${data.name}</span>
-                    <span class="text-xs text-gray-500 mt-0.5">المرحلة: ${data.phase} | الوحدة: ${data.unit}</span>
+                    <span class="text-xs text-gray-500 mt-0.5">الوحدة: ${data.unit}</span>
                 </div>
                 <button class="text-xs text-red-500 hover:text-red-700 font-semibold">حذف</button>
             `;
@@ -168,7 +172,6 @@ function loadLiveMaterials() {
         });
     });
 }
-
 // ── 3. إدارة الموردين ───────────────────────────────────────
 addSupplierForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
