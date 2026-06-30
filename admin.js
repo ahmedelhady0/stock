@@ -1,17 +1,15 @@
 // ═══════════════════════════════════════════════════════════
-// منطق لوحة الإدارة — النسخة النهائية المصلحة والمستقلة
+// منطق لوحة الإدارة — النسخة المستقلة والمصلحة بالكامل 100%
 // ═══════════════════════════════════════════════════════════
-import { auth, db, showMessage, hideMessage } from './firebase-config.js';
+import { auth, db } from './firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { collection, addDoc, onSnapshot, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// تعريف الـ appId الخاص بمشروعك بشكل ثابت لضمان عدم حدوث خطأ برميجي
+// المعرف الثابت الخاص بمشروعك
 const MY_APP_ID = "exco-60e92"; 
 
 const notAdminMsg = document.getElementById('notAdminMsg');
 const adminContent = document.getElementById('adminContent');
-const closeMessageBtn = document.getElementById('closeMessageBtn');
-closeMessageBtn?.addEventListener('click', hideMessage);
 
 const addProjectForm = document.getElementById('addProjectForm');
 const addMaterialForm = document.getElementById('addMaterialForm');
@@ -20,14 +18,38 @@ const projectsList = document.getElementById('projectsList');
 const materialsList = document.getElementById('materialsList');
 const suppliersList = document.getElementById('suppliersList');
 
+// دالة عرض الرسائل المحلية لضمان عدم حدوث خطأ بسبب الاستيراد
+function localShowMessage(text) {
+    const box = document.getElementById('messageBox');
+    const txt = document.getElementById('messageText');
+    if (box && txt) {
+        txt.textContent = text;
+        box.classList.remove('hidden');
+        box.classList.add('flex');
+    } else {
+        alert(text);
+    }
+}
+
+function localHideMessage() {
+    const box = document.getElementById('messageBox');
+    if (box) {
+        box.classList.add('hidden');
+        box.classList.remove('flex');
+    }
+}
+
+// تفعيل زر إغلاق الرسالة إن وجد
+document.getElementById('closeMessageBtn')?.addEventListener('click', localHideMessage);
+
 onAuthStateChanged(auth, async (user) => {
     if (!user) { window.location.href = 'index.html'; return; }
 
-    // إظهار اللوحة مباشرة وتخطي الحجب
-    notAdminMsg.classList.add('hidden');
-    adminContent.classList.remove('hidden');
+    // فتح اللوحة مباشرة للمستخدم الحالي
+    if (notAdminMsg) notAdminMsg.classList.add('hidden');
+    if (adminContent) adminContent.classList.remove('hidden');
 
-    // تشغيل القوائم الحية
+    // تشغيل جلب البيانات الحي
     loadLiveProjects();
     loadLiveMaterials();
     loadLiveSuppliers();
@@ -45,17 +67,18 @@ addProjectForm?.addEventListener('submit', async (e) => {
             name,
             createdAt: new Date()
         });
-        showMessage('🏢 تم إضافة المشروع الجديد بنجاح!');
+        localShowMessage('🏢 تم إضافة المشروع الجديد بنجاح!');
         nameInput.value = '';
-        setTimeout(() => hideMessage(), 1200);
+        setTimeout(() => localHideMessage(), 1200);
     } catch (err) {
-        console.error(err);
-        showMessage('❌ فشل الحفظ: ' + err.message);
+        console.error("Error adding project:", err);
+        localShowMessage('❌ فشل الحفظ: ' + err.message);
     }
 });
 
 function loadLiveProjects() {
     onSnapshot(collection(db, `artifacts/${MY_APP_ID}/public/data/projects`), (snapshot) => {
+        if (!projectsList) return;
         projectsList.innerHTML = '';
         if (snapshot.empty) {
             projectsList.innerHTML = '<p class="text-center text-gray-400 py-2 text-sm">لا توجد مشاريع مضافة</p>';
@@ -72,22 +95,14 @@ function loadLiveProjects() {
             item.querySelector('button').addEventListener('click', () => deleteItem('projects', d.id, data.name));
             projectsList.appendChild(item);
         });
-    });
+    }, (err) => { console.error("Snapshot error projects:", err); });
 }
 
 // ── 2. إدارة المواد ─────────────────────────────────────────
-// ── 2. إدارة المواد (النسخة المطابقة للـ HTML تماماً) ─────────────────────────
 addMaterialForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    
-    // 🎯 التعديل هنا: تم تغيير المعرف إلى materialName ليتطابق مع الـ HTML لديك
-    const nameInput = document.getElementById('materialName'); 
+    const nameInput = document.getElementById('newMaterialName');
     const unitInput = document.getElementById('materialUnit');
-
-    if (!nameInput || !unitInput) {
-        console.error("حقول الإدخال غير موجودة في الـ HTML");
-        return;
-    }
 
     const name = nameInput.value.trim();
     const unit = unitInput.value.trim();
@@ -109,8 +124,10 @@ addMaterialForm?.addEventListener('submit', async (e) => {
         localShowMessage('❌ فشل الحفظ: ' + err.message);
     }
 });
+
 function loadLiveMaterials() {
     onSnapshot(collection(db, `artifacts/${MY_APP_ID}/public/data/materials`), (snapshot) => {
+        if (!materialsList) return;
         materialsList.innerHTML = '';
         if (snapshot.empty) {
             materialsList.innerHTML = '<p class="text-center text-gray-400 py-2 text-sm">لا توجد مواد مضافة</p>';
@@ -130,7 +147,7 @@ function loadLiveMaterials() {
             item.querySelector('button').addEventListener('click', () => deleteItem('materials', d.id, data.name));
             materialsList.appendChild(item);
         });
-    });
+    }, (err) => { console.error("Snapshot error materials:", err); });
 }
 
 // ── 3. إدارة الموردين ───────────────────────────────────────
@@ -145,17 +162,18 @@ addSupplierForm?.addEventListener('submit', async (e) => {
             name,
             createdAt: new Date()
         });
-        showMessage('🤝 تم إضافة المورد بنجاح!');
+        localShowMessage('🤝 تم إضافة المورد بنجاح!');
         nameInput.value = '';
-        setTimeout(() => hideMessage(), 1200);
+        setTimeout(() => localHideMessage(), 1200);
     } catch (err) {
-        console.error(err);
-        showMessage('❌ فشل الحفظ: ' + err.message);
+        console.error("Error adding supplier:", err);
+        localShowMessage('❌ فشل الحفظ: ' + err.message);
     }
 });
 
 function loadLiveSuppliers() {
     onSnapshot(collection(db, `artifacts/${MY_APP_ID}/public/data/suppliers`), (snapshot) => {
+        if (!suppliersList) return;
         suppliersList.innerHTML = '';
         if (snapshot.empty) {
             suppliersList.innerHTML = '<p class="text-center text-gray-400 py-2 text-sm">لا توجد موردين مضافين</p>';
@@ -172,7 +190,7 @@ function loadLiveSuppliers() {
             item.querySelector('button').addEventListener('click', () => deleteItem('suppliers', d.id, data.name));
             suppliersList.appendChild(item);
         });
-    });
+    }, (err) => { console.error("Snapshot error suppliers:", err); });
 }
 
 // ── دالة الحذف العامة ─────────────────────────────────────────
@@ -180,10 +198,10 @@ async function deleteItem(collectionName, id, label) {
     if (!confirm(`هل أنت متأكد من حذف "${label}"؟`)) return;
     try {
         await deleteDoc(doc(db, `artifacts/${MY_APP_ID}/public/data/${collectionName}`, id));
-        showMessage('تم الحذف بنجاح');
-        setTimeout(() => hideMessage(), 1200);
+        localShowMessage('تم الحذف بنجاح');
+        setTimeout(() => localHideMessage(), 1200);
     } catch (error) {
         console.error(error);
-        showMessage('حدث خطأ أثناء الحذف: ' + error.message);
+        localShowMessage('حدث خطأ أثناء الحذف: ' + error.message);
     }
 }
