@@ -76,10 +76,18 @@ function loadLiveProjects() {
 }
 
 // ── 2. إدارة المواد ─────────────────────────────────────────
+// ── 2. إدارة المواد (النسخة المطابقة للـ HTML تماماً) ─────────────────────────
 addMaterialForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const nameInput = document.getElementById('newMaterialName');
+    
+    // 🎯 التعديل هنا: تم تغيير المعرف إلى materialName ليتطابق مع الـ HTML لديك
+    const nameInput = document.getElementById('materialName'); 
     const unitInput = document.getElementById('materialUnit');
+
+    if (!nameInput || !unitInput) {
+        console.error("حقول الإدخال غير موجودة في الـ HTML");
+        return;
+    }
 
     const name = nameInput.value.trim();
     const unit = unitInput.value.trim();
@@ -92,16 +100,15 @@ addMaterialForm?.addEventListener('submit', async (e) => {
             unit,
             createdAt: new Date()
         });
-        showMessage('📦 تم إضافة المادة بنجاح!');
+        localShowMessage('📦 تم إضافة المادة بنجاح!');
         nameInput.value = '';
         unitInput.value = '';
-        setTimeout(() => hideMessage(), 1200);
+        setTimeout(() => localHideMessage(), 1200);
     } catch (err) {
-        console.error(err);
-        showMessage('❌ فشل الحفظ: ' + err.message);
+        console.error("Error adding material:", err);
+        localShowMessage('❌ فشل الحفظ: ' + err.message);
     }
 });
-
 function loadLiveMaterials() {
     onSnapshot(collection(db, `artifacts/${MY_APP_ID}/public/data/materials`), (snapshot) => {
         materialsList.innerHTML = '';
