@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الرئيسية - مخزن شركة العزل</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="p-4 md:p-8 min-h-screen">
+    <div class="container p-6 md:p-8 w-full max-w-2xl mx-auto fade-in">
+        <header class="mb-6">
+            <div class="flex justify-between items-center glass-effect p-4 rounded-lg">
+                <span id="userWelcome" class="status-badge">مرحباً</span>
+                <div class="flex space-x-3 space-x-reverse">
+                    <a href="admin.html" id="adminPanelBtn" class="btn-gray py-2 px-4 text-sm font-semibold hidden">لوحة الإدارة</a>
+                    <button type="button" id="signOutBtn" class="btn-danger py-2 px-4 text-sm font-semibold">خروج</button>
+                </div>
+            </div>
+        </header>
+
+        <h1 class="text-2xl title-gradient text-center mb-8">سجّل حركة جديدة</h1>
+
+        <div class="grid grid-cols-1 gap-5 mb-8">
+            <a href="estilam.html" class="action-card action-receive">
+                <span class="action-icon">📥</span>
+                <div>
+                    <div class="action-title">استلام مواد على مشروع</div>
+                    <div class="action-desc">استلام من المورد ويُحسب مباشرة على المشروع</div>
+                </div>
+            </a>
+            <a href="mortagaa.html" class="action-card action-return">
+                <span class="action-icon">📤</span>
+                <div>
+                    <div class="action-title">مرتجع مواد</div>
+                    <div class="action-desc">إرجاع مواد من المشروع (يخصم من رصيد المشروع)</div>
+                </div>
+            </a>
+            <a href="project.html" class="action-card action-receive" style="border-color:#CE93D8;">
+                <span class="action-icon">📊</span>
+                <div>
+                    <div class="action-title">رصيد المشاريع</div>
+                    <div class="action-desc">المستلم − المرتجع لكل مادة في كل مشروع</div>
+                </div>
+            </a>
+        </div>
+
+        <div class="section-card p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold text-gray-800">آخر حركاتي</h2>
+                <a href="history.html" class="text-sm font-semibold" style="color:#6B2D8B;">عرض الكل ←</a>
+            </div>
+            <div id="recentMovements">
+                <p class="text-center text-gray-500 text-sm">جاري التحميل...</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="messageBox" class="fixed inset-0 modal-backdrop hidden items-center justify-center p-4">
+        <div class="modal-content p-6 shadow-xl w-full max-w-sm text-center">
+            <p id="messageText" class="text-gray-800 font-medium mb-4">رسالة النظام تظهر هنا</p>
+            <button id="closeMessageBtn" class="w-full py-2 px-4 btn-primary text-sm font-medium">إغلاق</button>
+        </div>
+    </div>
+
+    <script type="module" src="home.js"></script>
+</body>
+</html>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سجل حركاتي - مخزن شركة العزل</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="p-4 md:p-8 min-h-screen">
+    <div class="container p-6 md:p-8 w-full max-w-2xl mx-auto fade-in">
+        <a href="home.html" class="back-link">→ رجوع للرئيسية</a>
+
+        <h1 class="text-2xl title-gradient text-center mb-6">سجل حركاتي</h1>
+
+        <div class="flex gap-2 mb-5 overflow-x-auto pb-1">
+            <button class="filter-btn active" data-filter="all">الكل</button>
+            <button class="filter-btn" data-filter="receive">استلام</button>
+            <button class="filter-btn" data-filter="return">مرتجع</button>
+        </div>
+
+        <div id="movementsList">
+            <p class="text-center text-gray-500 text-sm">جاري التحميل...</p>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="editModal" class="fixed inset-0 modal-backdrop hidden items-center justify-center p-4 z-50">
+        <div class="modal-content p-6 shadow-xl w-full max-w-md max-h-[85vh] overflow-y-auto">
+            <h3 class="text-lg font-bold text-gray-800 mb-4 text-center">تعديل الحركة</h3>
+            <div id="editFormFields" class="space-y-4"></div>
+            <div class="flex gap-3 mt-5">
+                <button id="saveEditBtn" class="btn-primary flex-1 py-3 text-sm font-bold">حفظ التعديل</button>
+                <button id="cancelEditBtn" class="btn-gray flex-1 py-3 text-sm font-bold">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="messageBox" class="fixed inset-0 modal-backdrop hidden items-center justify-center p-4">
+        <div class="modal-content p-6 shadow-xl w-full max-w-sm text-center">
+            <p id="messageText" class="text-gray-800 font-medium mb-4">رسالة النظام تظهر هنا</p>
+            <button id="closeMessageBtn" class="w-full py-2 px-4 btn-primary text-sm font-medium">إغلاق</button>
+        </div>
+    </div>
+
+    <style>
+        .filter-btn {
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            background: white;
+            border: 2px solid #e0e0e0;
+            color: #666;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .filter-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: transparent;
+        }
+    </style>
+
+    <script type="module" src="history.js"></script>
+</body>
+</html>

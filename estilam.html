@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>استلام مواد - مخزن شركة العزل</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="p-4 md:p-8 min-h-screen">
+    <div class="container p-6 md:p-8 w-full max-w-xl mx-auto fade-in">
+        <a href="home.html" class="back-link">→ رجوع للرئيسية</a>
+
+        <h1 class="text-2xl font-bold text-center mb-6" style="color:#2E7D32;">📥 استلام مواد من المورد</h1>
+
+        <form id="receiveForm" class="space-y-5 section-card p-6">
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">التاريخ</label>
+                <input type="date" id="fDate" required class="input-field block w-full p-3">
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">المورد</label>
+                <input type="text" id="fSupplier" required class="input-field block w-full p-3" placeholder="اسم المورد">
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">المشروع</label>
+                <select id="fProject" required class="input-field block w-full p-3">
+                    <option value="" disabled selected>اختر المشروع</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">المرحلة</label>
+                <select id="fPhase" required class="input-field block w-full p-3">
+                    <option value="" disabled selected>اختر المرحلة</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">المادة</label>
+                <select id="fMaterial" required disabled class="input-field block w-full p-3">
+                    <option value="" disabled selected>اختر المرحلة أولاً</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">الوحدة</label>
+                <input type="text" id="fUnit" readonly class="input-field block w-full p-3 bg-gray-100 text-gray-500">
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">الكمية المستلمة</label>
+                <input type="number" id="fQuantity" required min="0" step="any" class="input-field block w-full p-3" placeholder="مثال: 50">
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">صورة فاتورة / إذن استلام (اختياري)</label>
+                <div class="file-input-wrapper">
+                    <input type="file" id="fImage" accept="image/*" capture="environment">
+                </div>
+                <div class="upload-progress hidden" id="uploadProgressWrap">
+                    <div class="upload-progress-bar" id="uploadProgressBar"></div>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">ملاحظات (اختياري)</label>
+                <textarea id="fNotes" rows="2" class="input-field block w-full p-3" placeholder="أي ملاحظات إضافية"></textarea>
+            </div>
+
+            <button type="submit" id="submitBtn" class="btn-secondary w-full py-4 px-6 text-lg font-bold">
+                تسجيل الاستلام
+            </button>
+        </form>
+    </div>
+
+    <div id="messageBox" class="fixed inset-0 modal-backdrop hidden items-center justify-center p-4">
+        <div class="modal-content p-6 shadow-xl w-full max-w-sm text-center">
+            <p id="messageText" class="text-gray-800 font-medium mb-4">رسالة النظام تظهر هنا</p>
+            <button id="closeMessageBtn" class="w-full py-2 px-4 btn-primary text-sm font-medium">إغلاق</button>
+        </div>
+    </div>
+
+    <script type="module" src="estilam.js"></script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>رصيد المشاريع - مخزن شركة العزل</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="p-4 md:p-8 min-h-screen">
+    <div class="container p-6 md:p-8 w-full max-w-3xl mx-auto fade-in">
+        <a href="home.html" class="back-link">→ رجوع للرئيسية</a>
+
+        <h1 class="text-2xl title-gradient text-center mb-2">📊 رصيد المشاريع</h1>
+        <p class="text-center text-sm text-gray-500 mb-6">المستلم على المشروع − المرتجع منه = الصافي المستهلك فعلياً</p>
+
+        <div class="mb-5">
+            <select id="projectSelect" class="input-field block w-full p-3">
+                <option value="" selected>كل المشاريع</option>
+            </select>
+        </div>
+
+        <div id="projectReport">
+            <p class="text-center text-gray-500 text-sm">جاري التحميل...</p>
+        </div>
+    </div>
+
+    <script type="module" src="project.js"></script>
+</body>
+</html>

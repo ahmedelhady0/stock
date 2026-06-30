@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة الإدارة - مخزن شركة العزل</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="p-4 md:p-8 min-h-screen">
+    <div class="container p-6 md:p-8 w-full max-w-4xl mx-auto fade-in">
+        <a href="home.html" class="back-link">→ رجوع للرئيسية</a>
+        <h1 class="text-2xl title-gradient text-center mb-8">لوحة الإدارة</h1>
+
+        <div id="notAdminMsg" class="hidden text-center p-8 section-card">
+            <p class="text-gray-600">هذه الصفحة للإدارة فقط.</p>
+        </div>
+
+        <div id="adminContent" class="hidden">
+            <!-- إضافة مشروع -->
+            <div class="section-card p-6 mb-6">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">➕ إضافة مشروع جديد</h3>
+                <form id="addProjectForm" class="flex flex-col md:flex-row gap-3">
+                    <input type="text" id="newProjectName" required class="input-field flex-1 p-3" placeholder="اسم المشروع (مثال: سنام 1)">
+                    <button type="submit" class="btn-primary py-3 px-6 text-sm font-semibold whitespace-nowrap">إضافة</button>
+                </form>
+                <div id="projectsList" class="mt-4 space-y-2"></div>
+            </div>
+
+            <!-- إضافة مادة -->
+            <div class="section-card p-6 mb-6">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">➕ إضافة مادة جديدة</h3>
+                <form id="addMaterialForm" class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <select id="newMaterialPhase" required class="input-field p-3">
+                        <option value="" disabled selected>المرحلة</option>
+                        <option value="فوم">فوم</option>
+                        <option value="رولات">رولات</option>
+                        <option value="أسمنتي">أسمنتي</option>
+                        <option value="دورات مياه">دورات مياه</option>
+                    </select>
+                    <input type="text" id="newMaterialName" required class="input-field p-3" placeholder="اسم المادة">
+                    <input type="text" id="newMaterialUnit" required class="input-field p-3" placeholder="الوحدة (كيس، رول..)">
+                    <button type="submit" class="btn-primary py-3 px-4 text-sm font-semibold">إضافة</button>
+                </form>
+                <div id="materialsList" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2"></div>
+            </div>
+
+            <!-- إضافة مورد -->
+            <div class="section-card p-6 mb-6">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">➕ إضافة مورد جديد</h3>
+                <form id="addSupplierForm" class="flex flex-col md:flex-row gap-3">
+                    <input type="text" id="newSupplierName" required class="input-field flex-1 p-3" placeholder="اسم المورد">
+                    <button type="submit" class="btn-primary py-3 px-6 text-sm font-semibold whitespace-nowrap">إضافة</button>
+                </form>
+                <div id="suppliersList" class="mt-4 space-y-2"></div>
+            </div>
+
+            <!-- المستخدمين -->
+            <div class="section-card p-6">
+                <h3 class="text-lg font-bold text-gray-800 mb-4">👥 المستخدمون</h3>
+                <div id="usersList" class="space-y-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="messageBox" class="fixed inset-0 modal-backdrop hidden items-center justify-center p-4">
+        <div class="modal-content p-6 shadow-xl w-full max-w-sm text-center">
+            <p id="messageText" class="text-gray-800 font-medium mb-4">رسالة النظام تظهر هنا</p>
+            <button id="closeMessageBtn" class="w-full py-2 px-4 btn-primary text-sm font-medium">إغلاق</button>
+        </div>
+    </div>
+
+    <script type="module" src="admin.js"></script>
+</body>
+</html>
