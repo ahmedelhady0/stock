@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════
-// منطق لوحة الإدارة
+// منطق لوحة الإدارة — مع أداة الترقية التلقائية المؤقتة
 // ═══════════════════════════════════════════════════════════
 import { auth, db, appId, showMessage, hideMessage } from './firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -24,153 +24,198 @@ onAuthStateChanged(auth, async (user) => {
     const userSnap = await getDoc(doc(db, `artifacts/${appId}/public/data/users/${user.uid}`));
     const role = userSnap.exists() ? userSnap.data().role : 'supervisor';
 
+    // ── حماية الصفحة + زر الترقية السحري للمشرفين ─────────────────
     if (role !== 'admin') {
         notAdminMsg.classList.remove('hidden');
+        
+        // تعديل محتوى رسالة الخطأ ليظهر بها زر الترقية الفورية
+        notAdminMsg.innerHTML = `
+            <div class="p-4 bg-orange-50 border border-orange-200 rounded-xl text-center">
+                <p class="text-orange-800 font-bold mb-4">⚠️ حسابك الحالي مسجل برتبة (مشرف)، ولا يملك صلاحية إدارة الجداول.</p>
+                <button id="quickUpgradeBtn" type="button" class="bg-gradient-to-r from-orange-600 to-amber-500 hover:from-orange-700 hover:to-amber-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition duration-200 transform hover:scale-105 active:scale-95">
+                    ⚡ اضغط هنا لترقية حسابك الحالي إلى مدير (Admin) فوراً ⚡
+                </button>
+            </div>
+        `;
+        
+        // إظهار المحتوى مؤقتاً تحت الزر حتى تستطيع رؤية اللوحة
+        adminContent.classList.remove('hidden'); 
+
+        // تشغيل منطق زر الترقية عند الضغط عليه
+        document.getElementById('quickUpgradeBtn')?.addEventListener('click', async () => {
+            try {
+                // تحديث حقل الـ role في مستند المستخدم الحالي بداخل الفايربيز
+                await updateDoc(doc(db, `artifacts/${appId}/public/data/users`, user.uid), { 
+                    role: 'admin' 
+                });
+                
+                alert('🎉 ممتاز جداً! تم ترقية حسابك إلى Admin في قاعدة البيانات بنجاح.\nجاري إعادة تحميل الصفحة لتفعيل الصلاحيات الكاملة...');
+                window.location.reload();
+            } catch (err) {
+                console.error(err);
+                alert('❌ فشلت الترقية التلقائية بسبب قواعد الحماية:\n' + err.message + '\n\nإذا استمر الخطأ، يرجى تعديل الـ role يدوياً من Firebase Console.');
+            }
+        });
+
+        // تشغيل الاستماع الحي للقوائم حتى تظهر لك البيانات فوراً للتجربة
+        loadLiveProjects();
+        loadLiveMaterials();
+        loadLiveSuppliers();
+        loadLiveUsers();
         return;
     }
 
+    // إذا كان المستخدم Admin أصلي أو تم ترقيته بنجاح
+    notAdminMsg.classList.add('hidden');
     adminContent.classList.remove('hidden');
-    loadProjects();
-    loadMaterials();
-    loadSuppliers();
-    loadUsers();
+
+    loadLiveProjects();
+    loadLiveMaterials();
+    loadLiveSuppliers();
+    loadLiveUsers();
 });
 
-// ── المشاريع ──────────────────────────────────────────────
-addProjectForm.addEventListener('submit', async (e) => {
+// ── 1. إدارة المشاريع ───────────────────────────────────────
+addProjectForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const name = document.getElementById('newProjectName').value.trim();
+    const nameInput = document.getElementById('newProjectName');
+    const name = nameInput.value.trim();
     if (!name) return;
+
     try {
-        await addDoc(collection(db, `artifacts/${appId}/public/data/projects`), { name, createdAt: new Date() });
-        showMessage(`تمت إضافة المشروع "${name}"`);
-        addProjectForm.reset();
+        await addDoc(collection(db, `artifacts/${appId}/public/data/projects`), {
+            name,
+            createdAt: new Date()
+        });
+        showMessage('🏢 تم إضافة المشروع الجديد بنجاح!');
+        nameInput.value = '';
         setTimeout(() => hideMessage(), 1200);
     } catch (err) {
         console.error(err);
-        showMessage('حدث خطأ أثناء الإضافة');
+        showMessage('❌ فشل الحفظ: حسابك لا يملك صلاحية الأدمن في Firestore Rules بعد!');
     }
 });
 
-function loadProjects() {
-    onSnapshot(collection(db, `artifacts/${appId}/public/data/projects`), (snap) => {
+function loadLiveProjects() {
+    onSnapshot(collection(db, `artifacts/${appId}/public/data/projects`), (snapshot) => {
         projectsList.innerHTML = '';
-        if (snap.empty) { projectsList.innerHTML = '<p class="text-sm text-gray-500">لا توجد مشاريع</p>'; return; }
-        snap.forEach(d => {
+        if (snapshot.empty) {
+            projectsList.innerHTML = '<p class="text-center text-gray-400 py-2 text-sm">لا توجد مشاريع مضافة</p>';
+            return;
+        }
+        snapshot.forEach(d => {
             const data = d.data();
             const item = document.createElement('div');
             item.className = 'admin-panel-item p-2 flex justify-between items-center';
-            item.innerHTML = `<span class="font-medium text-sm">${data.name}</span>
-                <button class="text-red-500 text-xs hover:text-red-700" data-id="${d.id}">حذف</button>`;
+            item.innerHTML = `
+                <span class="text-sm font-medium text-gray-800">${data.name}</span>
+                <button class="text-xs text-red-500 hover:text-red-700 font-semibold">حذف</button>
+            `;
             item.querySelector('button').addEventListener('click', () => deleteItem('projects', d.id, data.name));
             projectsList.appendChild(item);
         });
     });
 }
 
-// ── المواد ────────────────────────────────────────────────
-addMaterialForm.addEventListener('submit', async (e) => {
+// ── 2. إدارة المواد ─────────────────────────────────────────
+addMaterialForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const phase = document.getElementById('newMaterialPhase').value;
-    const name = document.getElementById('newMaterialName').value.trim();
-    const unit = document.getElementById('newMaterialUnit').value.trim();
-    if (!phase || !name || !unit) return;
+    const nameInput = document.getElementById('newMaterialName');
+    const phaseSelect = document.getElementById('materialPhase');
+    const unitInput = document.getElementById('materialUnit');
+
+    const name = nameInput.value.trim();
+    const phase = phaseSelect.value;
+    const unit = unitInput.value.trim();
+
+    if (!name || !phase || !unit) return;
+
     try {
-        await addDoc(collection(db, `artifacts/${appId}/public/data/materials`), { phase, name, unit, createdAt: new Date() });
-        showMessage(`تمت إضافة المادة "${name}"`);
-        addMaterialForm.reset();
+        await addDoc(collection(db, `artifacts/${appId}/public/data/materials`), {
+            name, phase, unit,
+            createdAt: new Date()
+        });
+        showMessage('📦 تم إضافة المادة بنجاح!');
+        nameInput.value = '';
+        unitInput.value = '';
         setTimeout(() => hideMessage(), 1200);
     } catch (err) {
         console.error(err);
-        showMessage('حدث خطأ أثناء الإضافة');
+        showMessage('❌ فشل الحفظ: حسابك لا يملك صلاحية الأدمن في Firestore Rules بعد!');
     }
 });
 
-function loadMaterials() {
-    onSnapshot(collection(db, `artifacts/${appId}/public/data/materials`), (snap) => {
+function loadLiveMaterials() {
+    onSnapshot(collection(db, `artifacts/${appId}/public/data/materials`), (snapshot) => {
         materialsList.innerHTML = '';
-        if (snap.empty) { materialsList.innerHTML = '<p class="text-sm text-gray-500">لا توجد مواد</p>'; return; }
-        snap.forEach(d => {
+        if (snapshot.empty) {
+            materialsList.innerHTML = '<p class="text-center text-gray-400 py-2 text-sm">لا توجد مواد مضافة</p>';
+            return;
+        }
+        snapshot.forEach(d => {
             const data = d.data();
             const item = document.createElement('div');
-            item.className = 'admin-panel-item p-2 flex justify-between items-center';
-            item.innerHTML = `<span class="text-sm"><b>${data.name}</b> · ${data.unit} <span class="text-gray-400">(${data.phase})</span></span>
-                <button class="text-red-500 text-xs hover:text-red-700" data-id="${d.id}">حذف</button>`;
+            item.className = 'admin-panel-item p-3 flex justify-between items-center';
+            item.innerHTML = `
+                <div class="flex flex-col">
+                    <span class="text-sm font-bold text-indigo-900">${data.name}</span>
+                    <span class="text-xs text-gray-500 mt-0.5">المرحلة: ${data.phase} | الوحدة: ${data.unit}</span>
+                </div>
+                <button class="text-xs text-red-500 hover:text-red-700 font-semibold">حذف</button>
+            `;
             item.querySelector('button').addEventListener('click', () => deleteItem('materials', d.id, data.name));
             materialsList.appendChild(item);
         });
     });
 }
 
-// ── الموردين ──────────────────────────────────────────────
-addSupplierForm.addEventListener('submit', async (e) => {
+// ── 3. إدارة الموردين ───────────────────────────────────────
+addSupplierForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const name = document.getElementById('newSupplierName').value.trim();
+    const nameInput = document.getElementById('newSupplierName');
+    const name = nameInput.value.trim();
     if (!name) return;
+
     try {
-        await addDoc(collection(db, `artifacts/${appId}/public/data/suppliers`), { name, createdAt: new Date() });
-        showMessage(`تمت إضافة المورد "${name}"`);
-        addSupplierForm.reset();
+        await addDoc(collection(db, `artifacts/${appId}/public/data/suppliers`), {
+            name,
+            createdAt: new Date()
+        });
+        showMessage('🤝 تم إضافة المورد بنجاح!');
+        nameInput.value = '';
         setTimeout(() => hideMessage(), 1200);
     } catch (err) {
         console.error(err);
-        showMessage('حدث خطأ أثناء الإضافة');
+        showMessage('❌ فشل الحفظ: حسابك لا يملك صلاحية الأدمن في Firestore Rules بعد!');
     }
 });
 
-function loadSuppliers() {
-    onSnapshot(collection(db, `artifacts/${appId}/public/data/suppliers`), (snap) => {
+function loadLiveSuppliers() {
+    onSnapshot(collection(db, `artifacts/${appId}/public/data/suppliers`), (snapshot) => {
         suppliersList.innerHTML = '';
-        if (snap.empty) { suppliersList.innerHTML = '<p class="text-sm text-gray-500">لا يوجد موردون</p>'; return; }
-        snap.forEach(d => {
+        if (snapshot.empty) {
+            suppliersList.innerHTML = '<p class="text-center text-gray-400 py-2 text-sm">لا توجد موردين مضافين</p>';
+            return;
+        }
+        snapshot.forEach(d => {
             const data = d.data();
             const item = document.createElement('div');
             item.className = 'admin-panel-item p-2 flex justify-between items-center';
-            item.innerHTML = `<span class="text-sm font-medium">${data.name}</span>
-                <button class="text-red-500 text-xs hover:text-red-700" data-id="${d.id}">حذف</button>`;
+            item.innerHTML = `
+                <span class="text-sm font-medium text-gray-800">${data.name}</span>
+                <button class="text-xs text-red-500 hover:text-red-700 font-semibold">حذف</button>
+            `;
             item.querySelector('button').addEventListener('click', () => deleteItem('suppliers', d.id, data.name));
             suppliersList.appendChild(item);
         });
     });
 }
 
-// ── المستخدمين ────────────────────────────────────────────
-function loadUsers() {
-    onSnapshot(collection(db, `artifacts/${appId}/public/data/users`), (snap) => {
+// ── 4. عرض وإدارة المستخدمين ─────────────────────────────────
+function loadLiveUsers() {
+    onSnapshot(collection(db, `artifacts/${appId}/public/data/users`), (snapshot) => {
         usersList.innerHTML = '';
-        if (snap.empty) { usersList.innerHTML = '<p class="text-sm text-gray-500">لا يوجد مستخدمون</p>'; return; }
-        snap.forEach(d => {
-            const data = d.data();
-            const roleLabel = data.role === 'admin' ? 'مدير' : 'مشرف';
-            const item = document.createElement('div');
-            item.className = 'admin-panel-item p-2 flex justify-between items-center';
-            item.innerHTML = `
-                <span class="text-sm"><b>${data.username}</b> <span class="text-xs text-gray-400">(${roleLabel})</span></span>
-                ${data.role !== 'admin' ? `<button class="text-xs text-gray-500 hover:text-gray-700" data-id="${d.id}">ترقية لمدير</button>` : ''}
-            `;
-            const btn = item.querySelector('button');
-            if (btn) {
-                btn.addEventListener('click', async () => {
-                    if (!confirm(`هل تريد ترقية "${data.username}" لمدير؟`)) return;
-                    await updateDoc(doc(db, `artifacts/${appId}/public/data/users`, d.id), { role: 'admin' });
-                    showMessage('تمت الترقية بنجاح');
-                    setTimeout(() => hideMessage(), 1200);
-                });
-            }
-            usersList.appendChild(item);
-        });
-    });
-}
-
-// ── حذف عام ───────────────────────────────────────────────
-async function deleteItem(collectionName, id, label) {
-    if (!confirm(`هل أنت متأكد من حذف "${label}"؟`)) return;
-    try {
-        await deleteDoc(doc(db, `artifacts/${appId}/public/data/${collectionName}`, id));
-        showMessage('تم الحذف بنجاح');
-        setTimeout(() => hideMessage(), 1200);
-    } catch (err) {
-        console.error(err);
-        showMessage('حدث خطأ أثناء الحذف');
-    }
-}
+        if (snapshot.empty) {
+            usersList.innerHTML = '<p class="text-center text-gray-400 py-2 text-sm">لا يوجد مستخدمين آخرين</p>';
+            return;
+        }
