@@ -38,7 +38,7 @@ onAuthStateChanged(auth, async (user) => {
             </div>
         `;
         
-        // إظهار المحتوى مؤقتاً تحت الزر حتى تستطيع رؤية اللوحة
+        // إظهار المحتوى مؤقتاً تحت الزر حتى تستطيع رؤية اللوحة وتجربتها
         adminContent.classList.remove('hidden'); 
 
         // تشغيل منطق زر الترقية عند الضغط عليه
@@ -219,3 +219,38 @@ function loadLiveUsers() {
             usersList.innerHTML = '<p class="text-center text-gray-400 py-2 text-sm">لا يوجد مستخدمين آخرين</p>';
             return;
         }
+        snapshot.forEach(d => {
+            const data = d.data();
+            const roleLabel = data.role === 'admin' ? 'مدير' : 'مشرف';
+            const item = document.createElement('div');
+            item.className = 'admin-panel-item p-2 flex justify-between items-center';
+            item.innerHTML = `
+                <span class="text-sm"><b>${data.username}</b> <span class="text-xs text-gray-400">(${roleLabel})</span></span>
+                ${data.role !== 'admin' ? `<button class="text-xs text-indigo-500 hover:text-indigo-700 font-semibold" data-id="${d.id}">ترقية لمدير</button>` : ''}
+            `;
+            const btn = item.querySelector('button');
+            if (btn) {
+                btn.addEventListener('click', async () => {
+                    if (!confirm(`هل تريد ترقية "${data.username}" لمدير؟`)) return;
+                    await updateDoc(doc(db, `artifacts/${appId}/public/data/users`, d.id), { role: 'admin' });
+                    showMessage('تمت الترقية بنجاح');
+                    setTimeout(() => hideMessage(), 1200);
+                });
+            }
+            usersList.appendChild(item);
+        });
+    });
+}
+
+// ── دالة الحذف العامة ─────────────────────────────────────────
+async function deleteItem(collectionName, id, label) {
+    if (!confirm(`هل أنت متأكد من حذف "${label}"؟`)) return;
+    try {
+        await deleteDoc(doc(db, `artifacts/${appId}/public/data/${collectionName}`, id));
+        showMessage('تم الحذف بنجاح');
+        setTimeout(() => hideMessage(), 1200);
+    } catch (error) {
+        console.error(error);
+        showMessage('حدث خطأ أثناء الحذف: ' + error.message);
+    }
+}
