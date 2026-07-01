@@ -23,7 +23,7 @@
     // appId ده اسم منطقي بيستخدمه الكود كمسار داخل Firestore
     // (artifacts/{appId}/public/data/...) — مش لازم يتغير أبدًا،
     // وكل ملفات المشروع لازم تستورده من هنا فقط، عشان محدش يكتب في مسار غلط زي ما حصل في admin.js قبل كده
-    export const appId = 'warehouse';
+    export const appId = 'warehouse-8edf4';
     
     // اسم المستخدم اللي لو حد عمل بيه حساب، هياخد صلاحية admin تلقائيًا (مرة واحدة بس، أول تسجيل)
     export const adminUsername = "admin";
