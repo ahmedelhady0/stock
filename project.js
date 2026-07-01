@@ -7,6 +7,7 @@ import { collection, query, where, onSnapshot } from "https://www.gstatic.com/fi
 
 const projectSelect = document.getElementById('projectSelect');
 const projectReport = document.getElementById('projectReport');
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyu7oj8W4D4wACBVNOZb1pSufU1LzWrqFF_pLDbq66EeBiGMedgfdLrUDxrxYlUhGV3/exec"; 
 
 let allMovements = [];
 let currentProjectFilter = '';
