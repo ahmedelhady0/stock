@@ -7,13 +7,12 @@ import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase
 import { getStorage } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyDNztzQF29nvHbys9yRPv5bICPGVbg32n8",
-    authDomain: "exco-60e92.firebaseapp.com",
-    projectId: "exco-60e92",
-    storageBucket: "exco-60e92.firebasestorage.app",
-    messagingSenderId: "875802729058",
-    appId: "1:875802729058:web:8f1f18f775032f0f270f3b",
-    measurementId: "G-3W0477KK1X"
+    apiKey: "AIzaSyAtMjR7QBvfLZ3c2QS6FpGrzBF-EIUbS4Q",
+    authDomain: "warehouse-8edf4.firebaseapp.com",
+    projectId: "warehouse-8edf4",
+    storageBucket: "warehouse-8edf4.firebasestorage.app",
+    messagingSenderId: "819315880651",
+    appId: "1:819315880651:web:03221eb8c80d115897214e"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -21,16 +20,20 @@ export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const storage = getStorage(app);
 
-// appId مختلف عن نظام التقارير القديم — عشان منعملش تعارض بيانات
+// appId ده اسم منطقي بيستخدمه الكود كمسار داخل Firestore
+// (artifacts/{appId}/public/data/...) — مش لازم يتغير أبدًا،
+// وكل ملفات المشروع لازم تستورده من هنا فقط، عشان محدش يكتب في مسار غلط زي ما حصل في admin.js قبل كده
 export const appId = 'exo-warehouse-system';
+
+// اسم المستخدم اللي لو حد عمل بيه حساب، هياخد صلاحية admin تلقائيًا (مرة واحدة بس، أول تسجيل)
 export const adminUsername = "admin";
 
 // ═══════════════════════════════════════════════════════════
-// قائمة المراحل الثابتة وربطها بالمواد الافتراضية
+// قائمة المراحل الثابتة
 // ═══════════════════════════════════════════════════════════
 export const PHASES = ["فوم", "رولات", "أسمنتي", "دورات مياه"];
 
-// خرائط الوحدات الافتراضية (تستخدم لو المادة الجديدة من غير وحدة محددة في Firestore)
+// خرائط الوحدات الافتراضية (اختيارية، للرجوع إليها لو حبيت)
 export const DEFAULT_UNITS = {
     "برميل أزرق": "برميل 220كج",
     "برميل أحمر": "برميل 240كج",
@@ -43,11 +46,11 @@ export const DEFAULT_UNITS = {
     "أسمنت": "كيس 20كج"
 };
 
-// أنواع المواد التي ترجع للمستودع (وليس للمورد أو تبقى مع المقاول)
+// ⚠️ ملاحظة: القوائم دي بتحدد إمكانية عمل مرتجع للمادة أو لأ، وهي مبنية على أسماء مواد ثابتة.
+// لو ضفت مادة جديدة من لوحة الإدارة مش موجودة في أي قائمة من التلاتة دي، مش هيبقى ليها مرتجع خالص.
+// شوف قسم "تحسينات مقترحة" في دليل الإعداد — الحل الصح إنها تبقى خاصية (returnable) جوه مستند المادة نفسه في Firestore.
 export const MATERIALS_RETURN_TO_WAREHOUSE = ["أسمنت", "دلمون"];
-// أنواع المواد التي ترجع للمورد
 export const MATERIALS_RETURN_TO_SUPPLIER = ["رول طبقتين", "طبقة حماية", "برايمر", "سيكا"];
-// أنواع المواد بدون مرتجع (فوم) — بس فيها "متبقي في العربية"
 export const MATERIALS_NO_RETURN = ["برميل أزرق", "برميل أحمر", "دهان"];
 
 // ═══════════════════════════════════════════════════════════
