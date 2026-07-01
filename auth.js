@@ -26,6 +26,20 @@ async function findUserByUsername(username) {
     return null;
 }
 
+// لو حساب الدخول (Auth) موجود بس مستند المستخدم في Firestore ناقص
+// (زي ما حصل قبل ما نظبط الـ Rules)، الدالة دي بتعمله من جديد بنفس القاعدة:
+// admin لو اسم المستخدم admin بالظبط، غير كده supervisor.
+async function ensureUserDoc(user, username) {
+    const userRef = doc(db, `artifacts/${appId}/public/data/users`, user.uid);
+    const snap = await getDoc(userRef);
+    if (!snap.exists()) {
+        const role = username.toLowerCase() === adminUsername.toLowerCase() ? 'admin' : 'supervisor';
+        await setDoc(userRef, {
+            username, role, email: user.email, createdAt: new Date()
+        });
+    }
+}
+
 async function signIn() {
     const username = authEmailInput.value.trim();
     const password = authPasswordInput.value.trim();
@@ -38,7 +52,15 @@ async function signIn() {
     showMessage('جاري تسجيل الدخول...');
     try {
         const email = usernameToEmail(username);
-        await signInWithEmailAndPassword(auth, email, password);
+        const cred = await signInWithEmailAndPassword(auth, email, password);
+
+        // إصلاح تلقائي: لو حسابك موجود في Auth بس مفيش له مستند في users
+        try {
+            await ensureUserDoc(cred.user, username);
+        } catch (fixErr) {
+            console.error('ensureUserDoc failed:', fixErr);
+        }
+
         showMessage('تم تسجيل الدخول بنجاح!');
         setTimeout(() => { window.location.href = 'home.html'; }, 1000);
     } catch (error) {
@@ -93,7 +115,7 @@ async function signUp() {
     } catch (error) {
         console.error(error);
         if (error.code === 'auth/email-already-in-use') {
-            showMessage('اسم المستخدم مستخدم بالفعل');
+            showMessage('اسم المستخدم مستخدم بالفعل، جرب تسجيل الدخول بدل إنشاء حساب جديد');
         } else if (error.code === 'auth/weak-password') {
             showMessage('كلمة المرور ضعيفة جداً');
         } else {
