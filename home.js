@@ -1,31 +1,68 @@
-// ضع رابط الـ Web App المستخرج من جوجل شيت هنا
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyu7oj8W4D4wACBVNOZb1pSufU1LzWrqFF_pLDbq66EeBiGMedgfdLrUDxrxYlUhGV3/exec"; 
+// ═══════════════════════════════════════════════════════════
+// الصفحة الرئيسية — Firebase Auth للهوية، Google Sheets للبيانات
+// ═══════════════════════════════════════════════════════════
+import { auth, showMessage, hideMessage, formatDate } from './firebase-config.js';
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getUserRole, getMovements } from './sheets-service.js';
 
-document.addEventListener("DOMContentLoaded", function() {
-    loadRecentMovements();
-    
-    document.getElementById('signOutBtn')?.addEventListener('click', () => {
-        // تفريغ الجلسة والرجوع لصفحة الدخول
-        localStorage.removeItem('exo_session');
-        window.location.href = 'index.html';
-    });
+const userWelcome = document.getElementById('userWelcome');
+const signOutBtn = document.getElementById('signOutBtn');
+const adminPanelBtn = document.getElementById('adminPanelBtn');
+const recentMovements = document.getElementById('recentMovements');
+const closeMessageBtn = document.getElementById('closeMessageBtn');
+closeMessageBtn?.addEventListener('click', hideMessage);
+
+signOutBtn?.addEventListener('click', async () => {
+    await signOut(auth);
+    window.location.href = 'index.html';
 });
 
-async function loadRecentMovements() {
-    const container = document.getElementById('recentMovements');
+const TYPE_LABELS = {
+    'استلام من مورد': 'استلام',
+    'صرف داخلي': 'صرف',
+    'مرتجع من الموقع': 'مرتجع'
+};
+
+onAuthStateChanged(auth, async (user) => {
+    if (!user) { window.location.href = 'index.html'; return; }
+
+    const username = user.email ? user.email.split('@')[0] : 'المستخدم';
+    if (userWelcome) userWelcome.textContent = `مرحباً: ${username}`;
+
     try {
-        // طلب جلب البيانات لإظهار آخر الحركات المسجلة في الشيت
-        let response = await fetch(`${WEB_APP_URL}?action=getSetupData`);
-        let data = await response.json();
-        
-        // سنفترض أننا سنعرض رسالة تأكيدية بالاتصال الناجح هنا لحين بناء شيت الحركة بالكامل
-        container.innerHTML = `
-            <div class="p-4 bg-green-50 border border-green-200 text-green-800 text-sm font-semibold rounded-lg text-center">
-                ✅ تم الاتصال بقاعدة بيانات جوجل شيت بنجاح والمنظومة جاهزة للعمل.
-            </div>
-        `;
-    } catch (error) {
-        container.innerHTML = '<p class="text-center text-red-500 text-sm">تعذر جلب البيانات من شيت جوجل، يرجى التأكد من الرابط.</p>';
-        console.error(error);
+        const { role } = await getUserRole(user.email);
+        if (adminPanelBtn) {
+            if (role === 'admin') adminPanelBtn.classList.remove('hidden');
+            else adminPanelBtn.classList.add('hidden');
+        }
+    } catch (err) {
+        console.error('getUserRole failed:', err);
     }
-}
+
+    try {
+        const movements = (await getMovements(user.email)).slice(0, 5);
+        if (!recentMovements) return;
+        if (movements.length === 0) {
+            recentMovements.innerHTML = '<p class="text-center text-gray-500 text-sm">لا توجد حركات مسجلة بعد</p>';
+            return;
+        }
+        recentMovements.innerHTML = '';
+        movements.forEach(m => {
+            const label = TYPE_LABELS[m.type] || m.type || '';
+            const card = document.createElement('div');
+            card.className = 'movement-card';
+            card.innerHTML = `
+                <div class="flex justify-between items-center mb-1">
+                    <span class="movement-badge" style="background:#667eea;">${label}</span>
+                    <span class="text-xs text-gray-400">${formatDate(m.timestamp)}</span>
+                </div>
+                <p class="text-sm text-gray-800 font-semibold">${m.material || ''} — ${m.quantity ?? ''} ${m.unit || ''}</p>
+                <p class="text-xs text-gray-500">${m.project || ''} ${m.phase ? '· ' + m.phase : ''}</p>
+            `;
+            recentMovements.appendChild(card);
+        });
+    } catch (err) {
+        console.error('getMovements failed:', err);
+        if (recentMovements) recentMovements.innerHTML = '<p class="text-center text-red-500 text-sm">فشل تحميل الحركات الأخيرة، تأكد من رابط Apps Script في sheets-service.js</p>';
+    }
+});
