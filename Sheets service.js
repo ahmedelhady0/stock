@@ -5,7 +5,7 @@
 // ═══════════════════════════════════════════════════════════
 
 // ⚠️ رابط الـ Web App بتاعك بعد أحدث Deploy
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyu7oj8W4D4wACBVNOZb1pSufU1LzWrqFF_pLDbq66EeBiGMedgfdLrUDxrxYlUhGV3/exec";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycby9p0z_PY7slUtTsZTiP2wJDqZ1DC2rbcJ1s-f3p3Qwg7HrTi_1hs2_y7sGGYi_krw/exec";
 
 async function callGet(params) {
     const url = new URL(WEB_APP_URL);
