@@ -2,7 +2,7 @@
 // طبقة الاتصال الموحدة بالـ Google Apps Script Web App
 // ═══════════════════════════════════════════════════════════
 
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwYg3A5PiNsOjk5A7ou22Bri6F2_DN8-OP0QXayr3_9paTzMbnjX-xT7fLJf8XiQLiL/exec"; 
+const WEB_APP_URL = "https://script.google.com/macros/library/d/1NobMckz-I6snRN9jxh5K5AsynX1fURueG-6uKS8Edw-2xGLeRB5f3qLJ/3"; 
 // ← غيّر الرابط ده بعد أحدث Deploy
 
 async function callGet(params) {
