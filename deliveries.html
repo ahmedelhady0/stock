@@ -76,6 +76,13 @@
         </div>
     </div>
 
-    <script src="deliveryService.js"></script>
+    <div id="messageBox" class="fixed inset-0 modal-backdrop hidden items-center justify-center p-4">
+        <div class="modal-content p-6 shadow-xl w-full max-w-sm text-center">
+            <p id="messageText" class="text-gray-800 font-medium mb-4">رسالة النظام تظهر هنا</p>
+            <button id="closeMessageBtn" class="w-full py-2 px-4 btn-primary text-sm font-medium">إغلاق</button>
+        </div>
+    </div>
+
+    <script type="module" src="deliveryService.js"></script>
 </body>
 </html>
