@@ -86,3 +86,28 @@
         const date = ts.toDate ? ts.toDate() : new Date(ts);
         return date.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
     }
+// دالة تحويل اسم المستخدم إلى إيميل
+export function usernameToEmail(username) {
+    return `${username.toLowerCase()}@slabet.app`;
+}
+
+// دالة إظهار رسائل الخطأ
+export function showMessage(text) {
+    const box = document.getElementById('messageBox');
+    const txt = document.getElementById('messageText');
+    if (box && txt) {
+        txt.textContent = text;
+        box.classList.remove('hidden');
+        box.classList.add('flex');
+    } else {
+        alert(text);
+    }
+}
+
+export function hideMessage() {
+    const box = document.getElementById('messageBox');
+    if (box) {
+        box.classList.add('hidden');
+        box.classList.remove('flex');
+    }
+}
