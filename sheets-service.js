@@ -5,29 +5,31 @@
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzZnl25Dvdn6StTIIIqWHTSRhiOeeCwd9udTAcipHzWp17VnAHWcyt-XhkAeUshA2RP/exec"; 
 // ← غيّر الرابط ده بعد أحدث Deploy
 
-async function callGet(params) {
-    const url = new URL(WEB_APP_URL);
-    Object.entries(params).forEach(([k, v]) => {
-        if (v !== undefined && v !== null) url.searchParams.set(k, v);
-    });
-    const res = await fetch(url.toString());
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const data = await res.json();
-    if (data.error) throw new Error(data.error);
-    return data;
-}
-
 async function callPost(body) {
-    const res = await fetch(WEB_APP_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
-    });
-    const data = await res.json();
-    if (data.ok === false) throw new Error(data.error || 'فشلت العملية');
-    return data;
-}
+    try {
+        const res = await fetch(WEB_APP_URL, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'text/plain;charset=utf-8'
+            },
+            body: JSON.stringify(body)
+        });
 
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
+
+        const text = await res.text();
+        try {
+            return JSON.parse(text);
+        } catch (e) {
+            return { ok: true }; // لو الرد مش JSON
+        }
+    } catch (err) {
+        console.error('POST Error:', err);
+        throw new Error('فشل الاتصال بالشيت - CORS أو Deploy');
+    }
+}
 // ── القراءة ────────────────────────────────────────────────
 export async function getSetupData() {
     return callGet({ action: 'getSetupData' });
