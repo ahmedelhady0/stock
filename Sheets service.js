@@ -1,15 +1,15 @@
 // ═══════════════════════════════════════════════════════════
 // طبقة الاتصال الموحدة بالـ Google Apps Script Web App
-// كل الملفات (home.js, admin.js, deliveries.js, project.js, history.js)
-// بتستخدم الدوال دي بدل ما كل ملف يعمل fetch بنفسه
 // ═══════════════════════════════════════════════════════════
 
-// ⚠️ رابط الـ Web App بتاعك بعد أحدث Deploy
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycby9p0z_PY7slUtTsZTiP2wJDqZ1DC2rbcJ1s-f3p3Qwg7HrTi_1hs2_y7sGGYi_krw/exec";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycby9p0z_PY7slUtTsZTiP2wJDqZ1DC2rbcJ1s-f3p3Qwg7HrTi_1hs2_y7sGGYi_krw/exec"; 
+// ← غيّر الرابط ده بعد أحدث Deploy
 
 async function callGet(params) {
     const url = new URL(WEB_APP_URL);
-    Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== null) url.searchParams.set(k, v); });
+    Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) url.searchParams.set(k, v);
+    });
     const res = await fetch(url.toString());
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
@@ -18,11 +18,9 @@ async function callGet(params) {
 }
 
 async function callPost(body) {
-    // ملاحظة: mode "no-cors" بيمنعنا من قراءة الرد، فمستخدمينه بس لو مش محتاجين نتأكد من نجاح الكتابة فورًا.
-    // هنا بنستخدم fetch عادي (بدون no-cors) عشان نقدر نقرأ رسالة الخطأ لو فشلت العملية (زي رفض صلاحية admin).
     const res = await fetch(WEB_APP_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // text/plain عشان نتجنب مشاكل CORS preflight مع Apps Script
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
     });
     const data = await res.json();
@@ -32,32 +30,35 @@ async function callPost(body) {
 
 // ── القراءة ────────────────────────────────────────────────
 export async function getSetupData() {
-    return callGet({ action: 'getSetupData' }); // { projects, materials, suppliers }
+    return callGet({ action: 'getSetupData' });
 }
 
-export async function getMovements(email) {
-    const data = await callGet({ action: 'getMovements', email });
-    return data.movements || [];
+export async function getMovements(email = null) {
+    return callGet({ action: 'getMovements', email }).then(d => d.movements || []);
 }
 
 export async function getUserRole(email) {
-    return callGet({ action: 'getUserRole', email }); // { exists, role, username }
+    return callGet({ action: 'getUserRole', email });
 }
 
 export async function getUsers() {
-    const data = await callGet({ action: 'getUsers' });
-    return data.users || [];
+    return callGet({ action: 'getUsers' }).then(d => d.users || []);
 }
 
 // ── الكتابة ────────────────────────────────────────────────
-export async function registerUser({ uid, username, email }) {
-    return callPost({ action: 'registerUser', uid, username, email });
+export async function registerUser(userData) {
+    return callPost({ action: 'registerUser', ...userData });
 }
 
-export async function logMovement(movement) {
-    return callPost({ action: 'logMovement', movement });
+export async function logReceipt(movement) {
+    return callPost({ action: 'logReceipt', movement });
 }
 
+export async function logSettlement(movement) {
+    return callPost({ action: 'logSettlement', movement });
+}
+
+// دوال الإدارة
 export async function addProject(name, requesterEmail) {
     return callPost({ action: 'addProject', name, requesterEmail });
 }
