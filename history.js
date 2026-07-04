@@ -1,7 +1,3 @@
-// ═══════════════════════════════════════════════════════════
-// سجل حركاتي — قراءة فقط من Google Sheets (فلترة على المستخدم الحالي)
-// أي تعديل أو حذف على حركة قديمة بيتعمل مباشرة في شيت Movements
-// ═══════════════════════════════════════════════════════════
 import { auth, formatDate } from './firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getMovements } from './sheets-service.js';
@@ -12,9 +8,8 @@ let currentFilter = 'all';
 const movementsList = document.getElementById('movementsList');
 
 const TYPE_LABELS = {
-    'استلام من مورد': { text: 'استلام', cls: 'receive' },
-    'مرتجع من الموقع': { text: 'مرتجع', cls: 'return' },
-    'صرف داخلي': { text: 'صرف', cls: 'spend' }
+    'استلام': { text: 'استلام', cls: 'receive' },
+    'تسوية': { text: 'تسوية', cls: 'settlement' }
 };
 
 document.querySelectorAll('.filter-btn').forEach(btn => {
@@ -29,41 +24,42 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
 onAuthStateChanged(auth, async (user) => {
     if (!user) { window.location.href = 'index.html'; return; }
     try {
-        allMovements = await getMovements(user.email);
+        allMovements = await getMovements();
         renderMovements();
     } catch (err) {
         console.error(err);
-        movementsList.innerHTML = '<p class="text-center text-gray-500 text-sm">تعذر تحميل البيانات: ' + err.message + '</p>';
+        movementsList.innerHTML = `<p class="text-center text-red-500 text-sm mt-8">تعذر تحميل السجل: ${err.message}</p>`;
     }
 });
 
 function renderMovements() {
-    const filterMap = { receive: 'استلام من مورد', return: 'مرتجع من الموقع' };
-    const filtered = currentFilter === 'all' ? allMovements : allMovements.filter(m => m.type === filterMap[currentFilter]);
+    let filtered = allMovements;
+
+    if (currentFilter === 'receive') {
+        filtered = allMovements.filter(m => m['نوع الحركة'] === 'استلام');
+    } else if (currentFilter === 'return') {
+        filtered = allMovements.filter(m => m['نوع الحركة'] === 'تسوية');
+    }
 
     if (filtered.length === 0) {
-        movementsList.innerHTML = '<p class="text-center text-gray-500 text-sm mt-8">لا توجد حركات</p>';
+        movementsList.innerHTML = '<p class="text-center text-gray-500 text-sm mt-8">لا توجد حركات مسجلة بعد</p>';
         return;
     }
 
     movementsList.innerHTML = '';
     filtered.forEach(m => {
-        const t = TYPE_LABELS[m.type] || { text: m.type || '', cls: '' };
+        const type = m['نوع الحركة'] || 'غير معروف';
         const card = document.createElement('div');
-        card.className = `movement-card type-${t.cls}`;
-
-        let extra = '';
-        if (m.type === 'استلام من مورد') extra = `المورد: ${m.supplier || '-'}`;
-        if (m.type === 'مرتجع من الموقع') extra = `الوجهة: ${m.supplier || '-'} · السبب: ${m.reason || '-'}`;
-
+        card.className = 'movement-card p-4 bg-white rounded-2xl shadow-sm mb-3';
         card.innerHTML = `
-            <div class="flex justify-between items-center mb-1">
-                <span class="movement-badge badge-${t.cls}">${t.text}</span>
-                <span class="text-xs text-gray-400">${formatDate(m.timestamp)}</span>
+            <div class="flex justify-between items-start">
+                <div>
+                    <span class="inline-block px-3 py-1 text-xs font-bold rounded-full bg-emerald-100 text-emerald-700">${type}</span>
+                    <p class="text-sm font-semibold mt-2">${m['المادة'] || ''} — ${m['وارد (استلام)'] || m['مصروف على المشروع'] || 0} ${m['الوحدة'] || ''}</p>
+                    <p class="text-xs text-gray-500">${m['المشروع'] || ''} • ${m['المرحلة'] || ''}</p>
+                </div>
+                <span class="text-xs text-gray-400">${formatDate(m['التاريخ'])}</span>
             </div>
-            <p class="text-sm text-gray-800 font-semibold">${m.material} — ${m.quantity ?? ''} ${m.unit || ''}</p>
-            <p class="text-xs text-gray-500 mb-1">${m.project || ''} ${m.phase ? '· ' + m.phase : ''}</p>
-            <p class="text-xs text-gray-500">${extra}</p>
         `;
         movementsList.appendChild(card);
     });
