@@ -6,39 +6,34 @@ let allMaterials = [];
 
 onAuthStateChanged(auth, async (user) => {
     if (!user) return window.location.href = 'index.html';
-    await loadData();
-});
-
-async function loadData() {
     const data = await getSetupData();
     allMaterials = data.materials || [];
+    fillProjects(data.projects || []);
+});
 
-    // Fill projects
-    const projSelect = document.getElementById('settleProject');
-    projSelect.innerHTML = '<option value="">اختر المشروع</option>';
-    data.projects.forEach(p => projSelect.innerHTML += `<option value="${p}">${p}</option>`);
+function fillProjects(projects) {
+    const select = document.getElementById('settleProject');
+    select.innerHTML = '<option value="">اختر المشروع</option>';
+    projects.forEach(p => {
+        select.innerHTML += `<option value="${p}">${p}</option>`;
+    });
 }
 
-document.getElementById('settleProject').addEventListener('change', updatePhases);
-document.getElementById('settlePhase').addEventListener('change', updateMaterials);
-
-function updatePhases(e) {
-    const project = e.target.value;
+document.getElementById('settleProject').addEventListener('change', (e) => {
+    const phases = [...new Set(allMaterials.map(m => m.phase).filter(Boolean))];
     const phaseSelect = document.getElementById('settlePhase');
     phaseSelect.innerHTML = '<option value="">اختر المرحلة</option>';
-    if (!project) return;
-    const phases = [...new Set(allMaterials.map(m => m.phase).filter(Boolean))];
     phases.forEach(ph => phaseSelect.innerHTML += `<option value="${ph}">${ph}</option>`);
-}
+});
 
-function updateMaterials(e) {
+document.getElementById('settlePhase').addEventListener('change', (e) => {
     const phase = e.target.value;
     const matSelect = document.getElementById('settleMaterial');
     matSelect.innerHTML = '<option value="">اختر المادة</option>';
-    if (!phase) return;
-    const filtered = allMaterials.filter(m => m.phase === phase);
-    filtered.forEach(m => matSelect.innerHTML += `<option value="${m.name}">${m.name}</option>`);
-}
+    allMaterials.filter(m => m.phase === phase).forEach(m => {
+        matSelect.innerHTML += `<option value="${m.name}">${m.name} (${m.unit})</option>`;
+    });
+});
 
 window.submitSettlement = async function submitSettlement() {
     const project = document.getElementById('settleProject').value;
