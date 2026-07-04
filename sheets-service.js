@@ -81,3 +81,49 @@ export async function addSupplier(name, requesterEmail) {
 export async function registerUser(userData) {
     return callPost({ action: 'registerUser', ...userData });
 }
+
+
+// دالة جلب وعرض الحركات
+async function loadRecentMovements() {
+    const container = document.getElementById('recentMovements');
+    if (!container) return;
+
+    container.innerHTML = '<p class="text-center text-gray-500 text-sm">جاري تحميل البيانات...</p>';
+
+    try {
+        const response = await fetch(WEB_APP_URL);
+        const data = await response.json();
+
+        // التأكد من وجود بيانات (تخطي العناوين)
+        if (!data || data.length <= 1) {
+            container.innerHTML = '<p class="text-center text-gray-500 text-sm">لا توجد حركات مسجلة</p>';
+            return;
+        }
+
+        // عرض آخر 5 حركات (نعكس الترتيب لنظهر الأحدث)
+        container.innerHTML = '';
+        const recentItems = data.slice(1).slice(-5).reverse();
+
+        recentItems.forEach(m => {
+            // توزيع الأعمدة: 
+            // m[3]=المشروع, m[5]=المادة, m[6]=الكمية
+            const card = document.createElement('div');
+            card.className = "p-4 border-b border-gray-100 hover:bg-gray-50 transition";
+            card.innerHTML = `
+                <div class="flex justify-between items-center mb-1">
+                    <span class="font-bold text-gray-800 text-sm">${m[5] || '---'}</span>
+                    <span class="text-purple-700 font-bold text-sm">${m[6] || '0'}</span>
+                </div>
+                <div class="text-xs text-gray-400">${m[3] || 'بدون مشروع'}</div>
+            `;
+            container.appendChild(card);
+        });
+
+    } catch (error) {
+        console.error("خطأ في الاتصال:", error);
+        container.innerHTML = '<p class="text-center text-red-500 text-sm">فشل تحميل الحركات. تأكد من إعدادات الـ Deploy.</p>';
+    }
+}
+
+// تشغيل الدالة فور تحميل الصفحة
+window.onload = loadRecentMovements;
