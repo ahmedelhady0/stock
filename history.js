@@ -20,10 +20,11 @@ onAuthStateChanged(auth, async (user) => {
     if (!user) { window.location.href = 'index.html'; return; }
     try {
         allMovements = await getMovements();
+        console.log("الحركات المجلوبة:", allMovements); // للتصحيح
         renderMovements();
     } catch (err) {
         console.error(err);
-        movementsList.innerHTML = `<p class="text-center text-red-500 text-sm mt-8">تعذر تحميل السجل: ${err.message}</p>`;
+        movementsList.innerHTML = `<p class="text-center text-red-500 text-sm mt-8">تعذر تحميل السجل</p>`;
     }
 });
 
@@ -31,9 +32,9 @@ function renderMovements() {
     let filtered = allMovements;
 
     if (currentFilter === 'receive') {
-        filtered = allMovements.filter(m => (m['نوع الحركة'] || '') === 'استلام');
+        filtered = allMovements.filter(m => String(m['نوع الحركة'] || '').includes('استلام'));
     } else if (currentFilter === 'return') {
-        filtered = allMovements.filter(m => (m['نوع الحركة'] || '') === 'تسوية');
+        filtered = allMovements.filter(m => String(m['نوع الحركة'] || '').includes('تسوية'));
     }
 
     if (filtered.length === 0) {
@@ -42,23 +43,21 @@ function renderMovements() {
     }
 
     movementsList.innerHTML = '';
-    filtered.forEach(m => {
-        const type = m['نوع الحركة'] || 'غير معروف';
+    filtered.slice(0, 20).forEach(m => {   // أول 20 حركة
         const card = document.createElement('div');
-        card.className = 'movement-card p-4 bg-white rounded-2xl shadow-sm mb-3 border-r-4 border-emerald-500';
-
+        card.className = 'movement-card p-4 bg-white rounded-2xl shadow-sm mb-3';
         card.innerHTML = `
-            <div class="flex justify-between">
+            <div class="flex justify-between items-start">
                 <div>
-                    <span class="px-3 py-1 text-xs font-bold rounded-full ${type.includes('استلام') ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">
-                        ${type}
+                    <span class="px-3 py-1 text-xs font-bold rounded-full bg-emerald-100 text-emerald-700">
+                        ${m['نوع الحركة'] || 'غير معروف'}
                     </span>
-                    <p class="mt-2 font-semibold">${m['المادة'] || 'غير محدد'} — ${m['وارد (استلام)'] || m['مصروف على المشروع'] || 0} ${m['الوحدة'] || ''}</p>
+                    <p class="mt-2 font-semibold text-gray-800">
+                        ${m['المادة'] || 'غير محدد'} — ${m['وارد (استلام)'] || m['مصروف على المشروع'] || 0} ${m['الوحدة'] || ''}
+                    </p>
                     <p class="text-sm text-gray-600">${m['المشروع'] || ''} • ${m['المرحلة'] || ''}</p>
                 </div>
-                <div class="text-right">
-                    <span class="text-xs text-gray-400 block">${formatDate(m['التاريخ'])}</span>
-                </div>
+                <span class="text-xs text-gray-400">${formatDate(m['التاريخ'])}</span>
             </div>
         `;
         movementsList.appendChild(card);
