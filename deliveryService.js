@@ -115,9 +115,9 @@ window.submitReceipt = async function submitReceipt() {
     submitBtn.textContent = 'جاري الحفظ...';
 
     try {
-        // حفظ فوري
-        for (const item of items) {
-            await logReceipt({
+        // إرسال كل المواد بالتوازي (أسرع بكتير)
+        const promises = items.map(item => 
+            logReceipt({
                 project,
                 phase,
                 material: item.material,
@@ -126,16 +126,14 @@ window.submitReceipt = async function submitReceipt() {
                 supplier: supplier || 'غير محدد',
                 contractor: createdBy,
                 notes
-            });
-        }
+            })
+        );
 
-        // رسالة نجاح فورية
-        showMessage(`✅ تم حفظ الاستلام بنجاح!`);
+        await Promise.all(promises);   // ← السرعة هنا
 
-        // إعادة تحميل بعد ثانية ونص
-        setTimeout(() => {
-            location.reload();
-        }, 1500);
+        showMessage(`✅ تم حفظ ${items.length} مادة بنجاح!`);
+
+        setTimeout(() => location.reload(), 1200);
 
     } catch (err) {
         console.error(err);
@@ -144,4 +142,3 @@ window.submitReceipt = async function submitReceipt() {
         submitBtn.textContent = 'حفظ الاستلام';
     }
 };
-document.getElementById('closeMessageBtn')?.addEventListener('click', hideMessage);
