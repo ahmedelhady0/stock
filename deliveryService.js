@@ -91,6 +91,7 @@ window.submitReceipt = async function submitReceipt() {
     const supplier = document.getElementById('matSupplier').value;
     const createdBy = document.getElementById('createdBy').value.trim();
     const notes = document.getElementById('motionNotes').value.trim();
+    const submitBtn = document.getElementById('submitBtn');
 
     if (!project || !phase || !createdBy) {
         showMessage('يرجى ملء المشروع والمرحلة واسم المشرف');
@@ -110,11 +111,11 @@ window.submitReceipt = async function submitReceipt() {
         return;
     }
 
-    const btn = document.getElementById('submitBtn');
-    btn.disabled = true;
-    btn.textContent = 'جاري الحفظ...';
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'جاري الحفظ...';
 
     try {
+        // حفظ فوري
         for (const item of items) {
             await logReceipt({
                 project,
@@ -128,13 +129,19 @@ window.submitReceipt = async function submitReceipt() {
             });
         }
 
-        showMessage('✅ تم حفظ الاستلام بنجاح!');
-        setTimeout(() => location.reload(), 1400);
+        // رسالة نجاح فورية
+        showMessage(`✅ تم حفظ الاستلام بنجاح!`);
+
+        // إعادة تحميل بعد ثانية ونص
+        setTimeout(() => {
+            location.reload();
+        }, 1500);
+
     } catch (err) {
+        console.error(err);
         showMessage('❌ خطأ أثناء الحفظ: ' + err.message);
-        btn.disabled = false;
-        btn.textContent = 'حفظ الاستلام';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'حفظ الاستلام';
     }
 };
-
 document.getElementById('closeMessageBtn')?.addEventListener('click', hideMessage);
