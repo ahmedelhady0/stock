@@ -25,8 +25,8 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
 onAuthStateChanged(auth, async (user) => {
     if (!user) { window.location.href = 'index.html'; return; }
     try {
-        allMovements = await getMovements(user.email);
-        console.log("أول حركة (للتصحيح):", allMovements[0]);
+        allMovements = await getMovements(); // كل الحركات (مؤقتاً بدون فلترة على المستخدم)
+        console.log("عدد الحركات:", allMovements.length, "أول حركة:", allMovements[0]);
         renderMovements();
     } catch (err) {
         movementsList.innerHTML = `<p class="text-red-500 text-center mt-8">تعذر تحميل السجل: ${err.message}</p>`;
@@ -66,6 +66,7 @@ function renderMovements() {
                         ${m['المادة'] || 'مادة غير محددة'} — ${m['وارد (استلام)'] || 0} ${m['الوحدة'] || ''}
                     </p>
                     <p class="text-sm text-gray-600">${m['المشروع'] || ''} • ${m['المرحلة'] || ''}</p>
+                    <p class="text-xs text-gray-400">بواسطة: ${m['المقاول / العمالة'] || 'غير محدد'}</p>
                     ${settled ? `<p class="text-xs text-gray-500 mt-1">
                         مصروف: ${m['مصروف على المشروع'] || 0} • متبقي بالعربية: ${m['متبقي في العربية'] || 0} •
                         مرتجع مستودع: ${m['مرتجع للمستودع'] || 0} • مرتجع مورد: ${m['مرتجع للمورد'] || 0}
