@@ -20,14 +20,9 @@ onAuthStateChanged(auth, async (user) => {
 
     try {
         const { role } = await getUserRole(user.email);
-        if (adminPanelBtn) {
-            if (role === 'admin') adminPanelBtn.classList.remove('hidden');
-        }
-    } catch (err) {
-        console.error(err);
-    }
+        if (adminPanelBtn) adminPanelBtn.classList.toggle('hidden', role !== 'admin');
+    } catch (err) {}
 
-    // تحميل آخر الحركات
     loadRecentMovements();
 });
 
@@ -45,18 +40,22 @@ async function loadRecentMovements() {
         recentMovements.innerHTML = '';
         movements.slice(0, 5).forEach(m => {
             const card = document.createElement('div');
-            card.className = 'movement-card p-3 bg-white rounded-xl shadow-sm mb-2';
+            card.className = 'p-3 bg-white rounded-xl shadow-sm mb-2 border-r-4 border-emerald-500';
             card.innerHTML = `
-                <div class="flex justify-between text-xs">
-                    <span class="font-medium">${m['المادة'] || 'مادة'}</span>
-                    <span class="text-emerald-600">${m['وارد (استلام)'] || m['مصروف على المشروع'] || 0}</span>
+                <div class="flex justify-between items-center">
+                    <div>
+                        <span class="text-sm font-semibold">${m['المادة'] || 'مادة'}</span>
+                        <span class="text-xs text-gray-500 block">${m['المشروع'] || ''}</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="font-bold text-emerald-600">${m['وارد (استلام)'] || m['مصروف على المشروع'] || 0}</span>
+                        <span class="text-xs text-gray-400 block">${m['الوحدة'] || ''}</span>
+                    </div>
                 </div>
-                <div class="text-xs text-gray-500">${m['المشروع'] || ''}</div>
             `;
             recentMovements.appendChild(card);
         });
     } catch (err) {
-        console.error(err);
         recentMovements.innerHTML = '<p class="text-red-500 text-center text-sm">فشل تحميل الحركات</p>';
     }
 }
