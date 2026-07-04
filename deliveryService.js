@@ -1,3 +1,89 @@
+import { auth, showMessage, hideMessage } from './firebase-config.js';
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getSetupData, logReceipt } from './sheets-service.js';
+
+let currentUser = null;
+let allMaterials = [];
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('matProject').addEventListener('change', handleProjectChange);
+    document.getElementById('matPhase').addEventListener('change', handlePhaseChange);
+});
+
+onAuthStateChanged(auth, async (user) => {
+    if (!user) { window.location.href = 'index.html'; return; }
+    currentUser = user;
+    document.getElementById('createdBy').value = user.email.split('@')[0];
+    await loadSetupData();
+});
+
+async function loadSetupData() {
+    try {
+        const data = await getSetupData();
+        console.log('Setup data:', data); // للتصحيح
+        allMaterials = data.materials || [];
+
+        const projSelect = document.getElementById('matProject');
+        projSelect.innerHTML = '<option value="">اختر المشروع...</option>';
+        (data.projects || []).forEach(p => {
+            projSelect.innerHTML += `<option value="${p}">${p}</option>`;
+        });
+
+        const supSelect = document.getElementById('matSupplier');
+        supSelect.innerHTML = '<option value="">اختر المورد...</option>';
+        (data.suppliers || []).forEach(s => {
+            supSelect.innerHTML += `<option value="${s}">${s}</option>`;
+        });
+
+    } catch (e) {
+        console.error('Load error:', e);
+        showMessage('فشل تحميل البيانات من الشيت: ' + e.message);
+    }
+}
+
+function handleProjectChange(e) {
+    const project = e.target.value;
+    const phaseSelect = document.getElementById('matPhase');
+    phaseSelect.innerHTML = '<option value="">اختر المرحلة...</option>';
+    phaseSelect.disabled = true;
+
+    if (!project) return;
+
+    const phases = [...new Set(allMaterials.map(m => m.phase).filter(Boolean))];
+    phases.forEach(ph => {
+        phaseSelect.innerHTML += `<option value="${ph}">${ph}</option>`;
+    });
+    phaseSelect.disabled = false;
+}
+
+function handlePhaseChange(e) {
+    const phase = e.target.value;
+    const container = document.getElementById('dynamicMaterialsContainer');
+    container.innerHTML = '';
+
+    if (!phase) {
+        document.getElementById('submitBtn').disabled = true;
+        return;
+    }
+
+    const filtered = allMaterials.filter(m => m.phase === phase);
+    filtered.forEach(mat => {
+        const div = document.createElement('div');
+        div.className = 'bg-white p-4 rounded-xl border border-gray-200';
+        div.innerHTML = `
+            <div class="font-medium text-gray-800 mb-2">${mat.name}</div>
+            <div class="flex items-center gap-3">
+                <input type="number" step="any" min="0" data-name="${mat.name}" data-unit="${mat.unit}"
+                       class="qty-input input-field text-center font-semibold flex-1">
+                <span class="text-sm text-gray-500">${mat.unit}</span>
+            </div>
+        `;
+        container.appendChild(div);
+    });
+
+    document.getElementById('submitBtn').disabled = false;
+};
+
 window.submitReceipt = async function submitReceipt() {
     const project = document.getElementById('matProject').value;
     const phase = document.getElementById('matPhase').value;
@@ -27,7 +113,6 @@ window.submitReceipt = async function submitReceipt() {
     submitBtn.disabled = true;
     submitBtn.textContent = 'جاري الحفظ...';
 
-    // رقم طلب واحد يشترك فيه كل المواد في نفس الاستلام
     const batchId = 'REQ-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
 
     try {
@@ -57,3 +142,5 @@ window.submitReceipt = async function submitReceipt() {
         submitBtn.textContent = 'حفظ الاستلام';
     }
 };
+
+document.getElementById('closeMessageBtn')?.addEventListener('click', hideMessage);
