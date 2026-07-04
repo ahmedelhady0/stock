@@ -4,7 +4,6 @@ import { getSetupData, logReceipt } from './sheets-service.js';
 
 let currentUser = null;
 let allMaterials = [];
-let projectPhasesMap = {};
 
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('matProject').addEventListener('change', handleProjectChange);
@@ -21,24 +20,21 @@ onAuthStateChanged(auth, async (user) => {
 async function loadSetupData() {
     try {
         const data = await getSetupData();
-        allMaterials = data.materials;
-
-        // مشاريع
+        allMaterials = data.materials || [];
+        
         const projSelect = document.getElementById('matProject');
         projSelect.innerHTML = '<option value="">اختر المشروع...</option>';
-        data.projects.forEach(p => {
+        (data.projects || []).forEach(p => {
             projSelect.innerHTML += `<option value="${p}">${p}</option>`;
         });
 
-        // موردين
         const supSelect = document.getElementById('matSupplier');
         supSelect.innerHTML = '<option value="">اختر المورد...</option>';
-        data.suppliers.forEach(s => {
+        (data.suppliers || []).forEach(s => {
             supSelect.innerHTML += `<option value="${s}">${s}</option>`;
         });
-
     } catch (e) {
-        showMessage('فشل تحميل البيانات من الشيت: ' + e.message);
+        showMessage('فشل تحميل البيانات: ' + e.message);
     }
 }
 
@@ -51,9 +47,7 @@ function handleProjectChange(e) {
     if (!project) return;
 
     const phases = [...new Set(allMaterials.map(m => m.phase).filter(Boolean))];
-    phases.forEach(ph => {
-        phaseSelect.innerHTML += `<option value="${ph}">${ph}</option>`;
-    });
+    phases.forEach(ph => phaseSelect.innerHTML += `<option value="${ph}">${ph}</option>`);
     phaseSelect.disabled = false;
 }
 
@@ -115,30 +109,27 @@ window.submitReceipt = async function submitReceipt() {
     submitBtn.textContent = 'جاري الحفظ...';
 
     try {
-        // إرسال كل المواد بالتوازي (أسرع بكتير)
-        const promises = items.map(item => 
-            logReceipt({
-                project,
-                phase,
-                material: item.material,
-                unit: item.unit,
-                quantity: item.quantity,
-                supplier: supplier || 'غير محدد',
-                contractor: createdBy,
-                notes
-            })
-        );
+        const promises = items.map(item => logReceipt({
+            project,
+            phase,
+            material: item.material,
+            unit: item.unit,
+            quantity: item.quantity,
+            supplier: supplier || 'غير محدد',
+            contractor: createdBy,
+            notes
+        }));
 
-        await Promise.all(promises);   // ← السرعة هنا
+        await Promise.all(promises);
 
         showMessage(`✅ تم حفظ ${items.length} مادة بنجاح!`);
-
-        setTimeout(() => location.reload(), 1200);
-
+        setTimeout(() => location.reload(), 1000);
     } catch (err) {
         console.error(err);
-        showMessage('❌ خطأ أثناء الحفظ: ' + err.message);
+        showMessage('❌ فشل الحفظ: ' + err.message);
         submitBtn.disabled = false;
         submitBtn.textContent = 'حفظ الاستلام';
     }
 };
+
+document.getElementById('closeMessageBtn')?.addEventListener('click', hideMessage);
