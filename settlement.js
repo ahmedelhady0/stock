@@ -6,9 +6,13 @@ let allMaterials = [];
 
 onAuthStateChanged(auth, async (user) => {
     if (!user) return window.location.href = 'index.html';
-    const data = await getSetupData();
-    allMaterials = data.materials || [];
-    fillProjects(data.projects || []);
+    try {
+        const data = await getSetupData();
+        allMaterials = data.materials || [];
+        fillProjects(data.projects || []);
+    } catch (e) {
+        showMessage('فشل تحميل البيانات: ' + e.message);
+    }
 });
 
 function fillProjects(projects) {
