@@ -135,7 +135,7 @@ window.submitReceipt = async function submitReceipt() {
         // إعادة تحميل بعد ثانية ونص
         setTimeout(() => {
             location.reload();
-        }, 1500);
+        }, 1100);
 
     } catch (err) {
         console.error(err);
