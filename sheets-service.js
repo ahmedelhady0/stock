@@ -46,12 +46,12 @@ export async function logReceipt(movement) {
     return callPost({ action: 'logReceipt', movement });
 }
 
-export async function updateMovement(id, updates) {
-    return callPost({ action: 'updateMovement', id, updates });
+export async function updateMovement(id, material, updates) {
+    return callPost({ action: 'updateMovement', id, material, updates });
 }
 
-export async function settleMovement(id, data) {
-    return callPost({ action: 'settleMovement', id, ...data });
+export async function settleMovement(id, material, data) {
+    return callPost({ action: 'settleMovement', id, material, ...data });
 }
 
 export async function registerUser(userData) {
