@@ -7,11 +7,6 @@ let currentFilter = 'all';
 
 const movementsList = document.getElementById('movementsList');
 
-const TYPE_LABELS = {
-    'استلام': { text: 'استلام', cls: 'receive' },
-    'تسوية': { text: 'تسوية', cls: 'settlement' }
-};
-
 document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
@@ -36,9 +31,9 @@ function renderMovements() {
     let filtered = allMovements;
 
     if (currentFilter === 'receive') {
-        filtered = allMovements.filter(m => m['نوع الحركة'] === 'استلام');
+        filtered = allMovements.filter(m => (m['نوع الحركة'] || '') === 'استلام');
     } else if (currentFilter === 'return') {
-        filtered = allMovements.filter(m => m['نوع الحركة'] === 'تسوية');
+        filtered = allMovements.filter(m => (m['نوع الحركة'] || '') === 'تسوية');
     }
 
     if (filtered.length === 0) {
@@ -50,15 +45,20 @@ function renderMovements() {
     filtered.forEach(m => {
         const type = m['نوع الحركة'] || 'غير معروف';
         const card = document.createElement('div');
-        card.className = 'movement-card p-4 bg-white rounded-2xl shadow-sm mb-3';
+        card.className = 'movement-card p-4 bg-white rounded-2xl shadow-sm mb-3 border-r-4 border-emerald-500';
+
         card.innerHTML = `
-            <div class="flex justify-between items-start">
+            <div class="flex justify-between">
                 <div>
-                    <span class="inline-block px-3 py-1 text-xs font-bold rounded-full bg-emerald-100 text-emerald-700">${type}</span>
-                    <p class="text-sm font-semibold mt-2">${m['المادة'] || ''} — ${m['وارد (استلام)'] || m['مصروف على المشروع'] || 0} ${m['الوحدة'] || ''}</p>
-                    <p class="text-xs text-gray-500">${m['المشروع'] || ''} • ${m['المرحلة'] || ''}</p>
+                    <span class="px-3 py-1 text-xs font-bold rounded-full ${type.includes('استلام') ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">
+                        ${type}
+                    </span>
+                    <p class="mt-2 font-semibold">${m['المادة'] || 'غير محدد'} — ${m['وارد (استلام)'] || m['مصروف على المشروع'] || 0} ${m['الوحدة'] || ''}</p>
+                    <p class="text-sm text-gray-600">${m['المشروع'] || ''} • ${m['المرحلة'] || ''}</p>
                 </div>
-                <span class="text-xs text-gray-400">${formatDate(m['التاريخ'])}</span>
+                <div class="text-right">
+                    <span class="text-xs text-gray-400 block">${formatDate(m['التاريخ'])}</span>
+                </div>
             </div>
         `;
         movementsList.appendChild(card);
