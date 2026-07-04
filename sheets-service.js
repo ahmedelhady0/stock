@@ -77,3 +77,7 @@ export async function addMaterial(phase, name, unit, requesterEmail) {
 export async function addSupplier(name, requesterEmail) {
     return callPost({ action: 'addSupplier', name, requesterEmail });
 }
+// أضفها مع الدوال الأخرى
+export async function registerUser(userData) {
+    return callPost({ action: 'registerUser', ...userData });
+}
