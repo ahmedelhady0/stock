@@ -49,13 +49,14 @@ export async function getSettlementRequests(status = null) {
     return data.requests || [];
 }
 
+export async function getEditRequests(status = null) {
+    const data = await callGet({ action: 'getEditRequests', status });
+    return data.requests || [];
+}
+
 // ── الكتابة ────────────────────────────────────────────────
 export async function logReceipt(movement) {
     return callPost({ action: 'logReceipt', movement });
-}
-
-export async function updateMovement(id, material, updates) {
-    return callPost({ action: 'updateMovement', id, material, updates });
 }
 
 export async function registerUser(userData) {
@@ -88,4 +89,16 @@ export async function approveSettlementRequest(id, reviewedBy, engineerNotes) {
 
 export async function rejectSettlementRequest(id, reviewedBy, engineerNotes) {
     return callPost({ action: 'rejectSettlementRequest', id, reviewedBy, engineerNotes });
+}
+
+export async function submitEditRequest(data) {
+    return callPost({ action: 'submitEditRequest', ...data });
+}
+
+export async function approveEditRequest(id, reviewedBy, engineerNotes) {
+    return callPost({ action: 'approveEditRequest', id, reviewedBy, engineerNotes });
+}
+
+export async function rejectEditRequest(id, reviewedBy, engineerNotes) {
+    return callPost({ action: 'rejectEditRequest', id, reviewedBy, engineerNotes });
 }
