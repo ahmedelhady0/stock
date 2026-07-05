@@ -9,48 +9,52 @@
 </head>
 <body class="p-4 md:p-8 min-h-screen bg-gradient-to-br from-amber-50 to-orange-50">
     <div class="container p-6 md:p-8 w-full max-w-2xl mx-auto fade-in">
-        <a href="home.html" class="back-link block mb-4">→ رجوع للرئيسية</a>
+        <a href="history.html" class="back-link block mb-4">→ رجوع لسجل حركاتي</a>
         <h1 class="text-2xl font-bold text-center mb-6 text-amber-700">⚖️ تسوية / مرتجع</h1>
 
         <div class="section-card p-6 space-y-6">
-            <div>
-                <label class="block text-sm font-semibold mb-2">المشروع</label>
-                <select id="settleProject" class="input-field w-full p-3"></select>
+            <div id="pickerWrap">
+                <label class="block text-sm font-semibold mb-2">اختر حركة الاستلام المراد تسويتها</label>
+                <select id="movementPicker" class="input-field w-full p-3">
+                    <option value="">جاري التحميل...</option>
+                </select>
             </div>
 
-            <div>
-                <label class="block text-sm font-semibold mb-2">المرحلة</label>
-                <select id="settlePhase" class="input-field w-full p-3" disabled></select>
-            </div>
-
-            <div>
-                <label class="block text-sm font-semibold mb-2">المادة</label>
-                <select id="settleMaterial" class="input-field w-full p-3" disabled></select>
-            </div>
-
-            <div class="grid grid-cols-3 gap-4">
-                <div>
-                    <label class="block text-sm font-semibold mb-2">متبقي في العربية</label>
-                    <input type="number" id="remainingInCar" class="input-field w-full p-3 text-center" placeholder="0">
+            <div id="settleFields" class="hidden space-y-6">
+                <div class="bg-amber-50 p-4 rounded-xl border border-amber-100 text-sm">
+                    <p><b>المشروع:</b> <span id="viewProject"></span> — <b>المرحلة:</b> <span id="viewPhase"></span></p>
+                    <p><b>المادة:</b> <span id="viewMaterial"></span> — <b>الكمية المستلمة:</b> <span id="viewQty"></span> <span id="viewUnit"></span></p>
                 </div>
-                <div>
-                    <label class="block text-sm font-semibold mb-2">مرتجع للمستودع</label>
-                    <input type="number" id="returnToStore" class="input-field w-full p-3 text-center" placeholder="0">
+
+                <div class="grid grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-semibold mb-2">متبقي في العربية</label>
+                        <input type="number" id="remainingInCar" class="input-field w-full p-3 text-center" placeholder="0" value="0">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-2">مرتجع للمستودع</label>
+                        <input type="number" id="returnToStore" class="input-field w-full p-3 text-center" placeholder="0" value="0">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold mb-2">مرتجع للمورد</label>
+                        <input type="number" id="returnToSupplier" class="input-field w-full p-3 text-center" placeholder="0" value="0">
+                    </div>
                 </div>
+
+                <p class="text-sm text-gray-600">المصروف الفعلي على المشروع سيُحسب تلقائياً = الكمية المستلمة − (المتبقي + المرتجعات)</p>
+                <p class="font-bold text-emerald-700">المصروف المتوقع: <span id="calcConsumed">0</span></p>
+
                 <div>
-                    <label class="block text-sm font-semibold mb-2">مرتجع للمورد</label>
-                    <input type="number" id="returnToSupplier" class="input-field w-full p-3 text-center" placeholder="0">
+                    <label class="block text-sm font-semibold mb-2">ملاحظات</label>
+                    <textarea id="settleNotes" rows="3" class="input-field w-full p-3"></textarea>
                 </div>
+
+                <button id="submitSettleBtn" class="w-full py-4 bg-amber-600 text-white font-bold rounded-2xl hover:bg-amber-700">
+                    حفظ التسوية
+                </button>
             </div>
 
-            <div>
-                <label class="block text-sm font-semibold mb-2">ملاحظات</label>
-                <textarea id="settleNotes" rows="3" class="input-field w-full p-3"></textarea>
-            </div>
-
-            <button onclick="submitSettlement()" class="w-full py-4 bg-amber-600 text-white font-bold rounded-2xl hover:bg-amber-700">
-                حفظ التسوية
-            </button>
+            <p id="noneMsg" class="hidden text-center text-gray-500 text-sm py-6">لا توجد حركات استلام بانتظار التسوية 🎉</p>
         </div>
     </div>
 
