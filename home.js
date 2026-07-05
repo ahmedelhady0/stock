@@ -5,6 +5,7 @@ import { getUserRole, getMovements } from './sheets-service.js';
 const userWelcome = document.getElementById('userWelcome');
 const signOutBtn = document.getElementById('signOutBtn');
 const adminPanelBtn = document.getElementById('adminPanelBtn');
+const approvalsBtn = document.getElementById('approvalsBtn');
 const recentMovements = document.getElementById('recentMovements');
 
 signOutBtn?.addEventListener('click', async () => {
@@ -21,7 +22,10 @@ onAuthStateChanged(auth, async (user) => {
     try {
         const { role } = await getUserRole(user.email);
         if (adminPanelBtn) adminPanelBtn.classList.toggle('hidden', role !== 'admin');
-    } catch (err) {}
+        if (approvalsBtn) approvalsBtn.classList.toggle('hidden', role !== 'admin');
+    } catch (err) {
+        console.error('Role check error:', err);
+    }
 
     loadRecentMovements();
 });
