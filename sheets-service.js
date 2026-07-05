@@ -102,3 +102,7 @@ export async function approveEditRequest(id, reviewedBy, engineerNotes) {
 export async function rejectEditRequest(id, reviewedBy, engineerNotes) {
     return callPost({ action: 'rejectEditRequest', id, reviewedBy, engineerNotes });
 }
+export async function getAllRequestsLog() {
+    const data = await callGet({ action: 'getAllRequestsLog' });
+    return data.log || [];
+}
