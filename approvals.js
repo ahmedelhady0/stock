@@ -132,12 +132,14 @@ function renderEditCard(r) {
             <div>
                 <span class="movement-badge" style="background:#9C27B0;">قيد الموافقة</span>
                 <p class="font-bold text-gray-800 mt-2">${r['المادة'] || ''}</p>
+                <p class="text-sm text-gray-600">المشروع: ${r['المشروع'] || 'غير محدد'}</p>
                 <p class="text-sm text-gray-600">مقدم الطلب: ${r['مقدم الطلب'] || 'غير محدد'}</p>
             </div>
             <span class="text-xs text-gray-400">${formatDate(r['تاريخ الطلب'])}</span>
         </div>
-        <div class="grid grid-cols-2 gap-3 text-sm bg-gray-50 rounded-xl p-3 mb-3">
-            <div><p class="text-gray-500 text-xs">الكمية الجديدة</p><p class="font-bold">${r['الكمية الجديدة'] || 0}</p></div>
+        <div class="grid grid-cols-3 gap-3 text-center text-sm bg-gray-50 rounded-xl p-3 mb-3">
+            <div><p class="text-gray-500 text-xs">الكمية السابقة</p><p class="font-bold text-gray-700">${r['الكمية السابقة'] ?? 0}</p></div>
+            <div><p class="text-gray-500 text-xs">الكمية المطلوبة</p><p class="font-bold text-emerald-700">${r['الكمية الجديدة'] ?? 0}</p></div>
             <div><p class="text-gray-500 text-xs">الوجهة الجديدة</p><p class="font-bold">${r['الوجهة الجديدة'] || '-'}</p></div>
         </div>
         ${r['الملاحظات الجديدة'] ? `<p class="text-xs text-gray-500 mb-3">الملاحظات الجديدة: ${r['الملاحظات الجديدة']}</p>` : ''}
