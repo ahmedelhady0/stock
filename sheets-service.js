@@ -19,7 +19,10 @@ async function callPost(body) {
         body: JSON.stringify(body)
     });
     const text = await res.text();
-    try { return JSON.parse(text); } catch (e) { return { ok: true }; }
+    let parsed;
+    try { parsed = JSON.parse(text); } catch (e) { parsed = { ok: true }; }
+    if (parsed && parsed.ok === false) throw new Error(parsed.error || 'فشل الطلب');
+    return parsed;
 }
 
 // ── القراءة ────────────────────────────────────────────────
@@ -41,6 +44,11 @@ export async function getUsers() {
     return data.users || [];
 }
 
+export async function getSettlementRequests(status = null) {
+    const data = await callGet({ action: 'getSettlementRequests', status });
+    return data.requests || [];
+}
+
 // ── الكتابة ────────────────────────────────────────────────
 export async function logReceipt(movement) {
     return callPost({ action: 'logReceipt', movement });
@@ -48,10 +56,6 @@ export async function logReceipt(movement) {
 
 export async function updateMovement(id, material, updates) {
     return callPost({ action: 'updateMovement', id, material, updates });
-}
-
-export async function settleMovement(id, material, data) {
-    return callPost({ action: 'settleMovement', id, material, ...data });
 }
 
 export async function registerUser(userData) {
@@ -72,4 +76,16 @@ export async function addSupplier(name, requesterEmail) {
 
 export async function promoteUser(targetEmail, requesterEmail) {
     return callPost({ action: 'promoteUser', targetEmail, requesterEmail });
+}
+
+export async function submitSettlementRequest(data) {
+    return callPost({ action: 'submitSettlementRequest', ...data });
+}
+
+export async function approveSettlementRequest(id, reviewedBy, engineerNotes) {
+    return callPost({ action: 'approveSettlementRequest', id, reviewedBy, engineerNotes });
+}
+
+export async function rejectSettlementRequest(id, reviewedBy, engineerNotes) {
+    return callPost({ action: 'rejectSettlementRequest', id, reviewedBy, engineerNotes });
 }
