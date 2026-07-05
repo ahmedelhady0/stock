@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>موافقات التسوية - مخزن شركة العزل</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="p-4 md:p-8 min-h-screen">
+    <div class="container p-6 md:p-8 w-full max-w-3xl mx-auto fade-in">
+        <a href="home.html" class="back-link">→ رجوع للرئيسية</a>
+        <h1 class="text-2xl title-gradient text-center mb-2">✅ موافقات التسوية</h1>
+        <p class="text-center text-sm text-gray-500 mb-6">مراجعة طلبات التسوية المرسلة من المشرفين</p>
+
+        <div id="notAdminMsg" class="hidden text-center p-8 section-card">
+            <p class="text-gray-600">هذه الصفحة للمهندس/الإدارة فقط.</p>
+        </div>
+
+        <div id="requestsList">
+            <p class="text-center text-gray-500 text-sm">جاري التحميل...</p>
+        </div>
+    </div>
+
+    <div id="messageBox" class="fixed inset-0 modal-backdrop hidden items-center justify-center p-4">
+        <div class="modal-content p-6 shadow-xl w-full max-w-sm text-center">
+            <p id="messageText" class="text-gray-800 font-medium mb-4"></p>
+            <button id="closeMessageBtn" class="w-full py-3 px-6 btn-primary">إغلاق</button>
+        </div>
+    </div>
+
+    <script type="module" src="approvals.js"></script>
+</body>
+</html>
