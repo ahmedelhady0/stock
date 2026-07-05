@@ -20,12 +20,14 @@ onAuthStateChanged(auth, async (user) => {
     if (userWelcome) userWelcome.textContent = `مرحباً: ${username}`;
 
     try {
-        const { role } = await getUserRole(user.email);
-        if (adminPanelBtn) adminPanelBtn.classList.toggle('hidden', role !== 'admin');
-        if (approvalsBtn) approvalsBtn.classList.toggle('hidden', role !== 'admin');
-    } catch (err) {
-        console.error('Role check error:', err);
-    }
+    const { role } = await getUserRole(user.email);
+    if (adminPanelBtn) adminPanelBtn.classList.toggle('hidden', role !== 'admin');
+    if (approvalsBtn) approvalsBtn.classList.toggle('hidden', role !== 'admin');
+    const requestsLogBtn = document.getElementById('requestsLogBtn');
+    if (requestsLogBtn) requestsLogBtn.classList.toggle('hidden', role !== 'admin');
+} catch (err) {
+    console.error('Role check error:', err);
+}
 
     loadRecentMovements();
 });
