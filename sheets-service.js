@@ -73,3 +73,10 @@ export async function addSupplier(name, requesterEmail) {
 export async function promoteUser(targetEmail, requesterEmail) {
     return callPost({ action: 'promoteUser', targetEmail, requesterEmail });
 }
+export async function logReceipt(movement) {
+    return callPost({ action: 'logReceipt', movement });
+}
+
+export async function logSettlement(movement) {
+    return callPost({ action: 'logSettlement', movement });
+}
