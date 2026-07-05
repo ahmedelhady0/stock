@@ -1,9 +1,12 @@
 import { auth, showMessage, hideMessage, formatDate } from './firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getMovements, updateMovement } from './sheets-service.js';
+import { getMovements, getEditRequests, getSettlementRequests, submitEditRequest } from './sheets-service.js';
 
 let allMovements = [];
+let pendingEditKeys = new Set();
+let pendingSettleKeys = new Set();
 let currentFilter = 'all';
+let currentUserEmail = null;
 
 const movementsList = document.getElementById('movementsList');
 const editModal = document.getElementById('editModal');
@@ -23,10 +26,23 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
     });
 });
 
+function keyOf(idOrObj, material) {
+    if (typeof idOrObj === 'object') return `${idOrObj['ID']}|||${idOrObj['المادة']}`;
+    return `${idOrObj}|||${material}`;
+}
+
 onAuthStateChanged(auth, async (user) => {
     if (!user) { window.location.href = 'index.html'; return; }
+    currentUserEmail = user.email;
     try {
-        allMovements = await getMovements(); // كل الحركات (فريق صغير)
+        const [movements, pendingEdits, pendingSettles] = await Promise.all([
+            getMovements(),
+            getEditRequests('قيد الموافقة'),
+            getSettlementRequests('قيد الموافقة')
+        ]);
+        allMovements = movements;
+        pendingEditKeys = new Set(pendingEdits.map(r => keyOf(r['معرف الحركة'], r['المادة'])));
+        pendingSettleKeys = new Set(pendingSettles.map(r => keyOf(r['معرف الحركة'], r['المادة'])));
         renderMovements();
     } catch (err) {
         movementsList.innerHTML = `<p class="text-red-500 text-center mt-8">تعذر تحميل السجل: ${err.message}</p>`;
@@ -65,20 +81,28 @@ function renderMovements() {
 
     movementsList.innerHTML = '';
     groups.forEach(group => {
-        const allSettled = group.items.every(isSettled);
         const card = document.createElement('div');
         card.className = 'movement-card p-4 bg-white rounded-2xl shadow-sm mb-4';
 
         const itemsHtml = group.items.map(m => {
             const settled = isSettled(m);
+            const key = keyOf(m);
+            const editPending = pendingEditKeys.has(key);
+            const settlePending = pendingSettleKeys.has(key);
             const safeMat = encodeURIComponent(m['المادة'] || '');
+
+            let statusBadge = settled
+                ? `<span class="movement-badge badge-return">تمت التسوية</span>`
+                : settlePending
+                    ? `<span class="movement-badge badge-spend">تسوية قيد موافقة المهندس</span>`
+                    : `<span class="movement-badge badge-receive">بانتظار التسوية</span>`;
+
             return `
                 <div class="border-t border-gray-100 pt-3 mt-3 first:border-0 first:mt-0 first:pt-0">
                     <div class="flex justify-between items-start">
                         <div>
-                            <span class="movement-badge ${settled ? 'badge-return' : 'badge-receive'}">
-                                ${settled ? 'تمت التسوية' : 'بانتظار التسوية'}
-                            </span>
+                            ${statusBadge}
+                            ${editPending ? `<span class="movement-badge" style="background:#9C27B0;">تعديل قيد موافقة المهندس</span>` : ''}
                             <p class="mt-1 font-semibold text-gray-800">
                                 ${m['المادة'] || ''} — ${m['وارد (استلام)'] || 0} ${m['الوحدة'] || ''}
                             </p>
@@ -89,8 +113,8 @@ function renderMovements() {
                         </div>
                     </div>
                     <div class="flex gap-2 mt-2">
-                        <button class="btn-edit-sm" data-id="${group.id}" data-material="${safeMat}">✏️ تعديل</button>
-                        ${!settled ? `<button class="btn-delete-sm settle-btn" data-id="${group.id}" data-material="${safeMat}">⚖️ تسوية</button>` : ''}
+                        <button class="btn-edit-sm" data-id="${group.id}" data-material="${safeMat}" ${editPending ? 'disabled' : ''}>✏️ تعديل</button>
+                        ${!settled && !settlePending ? `<button class="btn-delete-sm settle-btn" data-id="${group.id}" data-material="${safeMat}">⚖️ تسوية</button>` : ''}
                     </div>
                 </div>
             `;
@@ -110,7 +134,7 @@ function renderMovements() {
         movementsList.appendChild(card);
     });
 
-    movementsList.querySelectorAll('.btn-edit-sm').forEach(btn => {
+    movementsList.querySelectorAll('.btn-edit-sm:not([disabled])').forEach(btn => {
         btn.addEventListener('click', () => openEditModal(btn.dataset.id, decodeURIComponent(btn.dataset.material)));
     });
     movementsList.querySelectorAll('.settle-btn').forEach(btn => {
@@ -143,6 +167,7 @@ function openEditModal(id, material) {
             <label class="block text-sm font-semibold mb-1">ملاحظات</label>
             <textarea id="editNotes" rows="3" class="input-field w-full p-3">${m['ملاحظات'] || ''}</textarea>
         </div>
+        <p class="text-xs text-amber-600">⚠️ هذا التعديل سيُرسل كطلب وينتظر موافقة المهندس قبل التطبيق الفعلي.</p>
     `;
     editModal.classList.remove('hidden');
     editModal.classList.add('flex');
@@ -164,18 +189,21 @@ saveEditBtn?.addEventListener('click', async () => {
     const notes = document.getElementById('editNotes').value.trim();
 
     saveEditBtn.disabled = true;
-    saveEditBtn.textContent = 'جاري الحفظ...';
+    saveEditBtn.textContent = 'جاري الإرسال...';
     try {
-        await updateMovement(editingId, editingMaterial, {
-            'وارد (استلام)': quantity,
-            'وجهة الاستلام / الإرجاع': supplier,
-            'ملاحظات': notes
+        await submitEditRequest({
+            movementId: editingId,
+            material: editingMaterial,
+            quantity,
+            supplier,
+            notes,
+            requestedBy: currentUserEmail ? currentUserEmail.split('@')[0] : ''
         });
-        showMessage('✅ تم تعديل الحركة بنجاح');
+        showMessage('✅ تم إرسال طلب التعديل للمهندس، بانتظار الموافقة');
         closeEditModal();
-        setTimeout(() => location.reload(), 1000);
+        setTimeout(() => location.reload(), 1200);
     } catch (err) {
-        showMessage('❌ فشل التعديل: ' + err.message);
+        showMessage('❌ فشل الإرسال: ' + err.message);
     } finally {
         saveEditBtn.disabled = false;
         saveEditBtn.textContent = 'حفظ التعديل';
