@@ -1,8 +1,9 @@
 import { auth, showMessage, hideMessage } from './firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getMovements, settleMovement } from './sheets-service.js';
+import { getMovements, getSettlementRequests, submitSettlementRequest } from './sheets-service.js';
 
 let unsettled = [];
+let currentUserEmail = null;
 let selectedMovement = null;
 
 const picker = document.getElementById('movementPicker');
@@ -18,19 +19,30 @@ function isSettled(m) {
     return (consumed + remaining + retStore + retSupplier) > 0;
 }
 
-function keyOf(m) {
-    return `${m['ID']}|||${m['المادة']}`;
+function keyOf(idOrObj, material) {
+    if (typeof idOrObj === 'object') return `${idOrObj['ID']}|||${idOrObj['المادة']}`;
+    return `${idOrObj}|||${material}`;
 }
 
 onAuthStateChanged(auth, async (user) => {
     if (!user) return window.location.href = 'index.html';
+    currentUserEmail = user.email;
     try {
-        const all = await getMovements(); // كل الحركات (فريق صغير)
-        unsettled = all.filter(m => !isSettled(m));
+        const [all, pendingRequests] = await Promise.all([
+            getMovements(),
+            getSettlementRequests('قيد الموافقة')
+        ]);
+
+        const pendingKeys = new Set(pendingRequests.map(r => keyOf(r['معرف الحركة'], r['المادة'])));
+
+        unsettled = all.filter(m => !isSettled(m) && !pendingKeys.has(keyOf(m)));
 
         if (unsettled.length === 0) {
             pickerWrap.classList.add('hidden');
             noneMsg.classList.remove('hidden');
+            if (pendingRequests.length > 0) {
+                noneMsg.textContent = 'كل الحركات المتبقية مرسلة كطلبات وبانتظار موافقة المهندس ⏳';
+            }
             return;
         }
 
@@ -39,12 +51,11 @@ onAuthStateChanged(auth, async (user) => {
             picker.innerHTML += `<option value="${keyOf(m)}">${m['المشروع']} — ${m['المادة']} (${m['وارد (استلام)']} ${m['الوحدة']})</option>`;
         });
 
-        // لو جاي من زرار "تسوية" في سجل حركاتي فيه id + material جاهزين
         const params = new URLSearchParams(window.location.search);
         const presetId = params.get('id');
         const presetMaterial = params.get('material');
         if (presetId && presetMaterial) {
-            const key = `${presetId}|||${presetMaterial}`;
+            const key = keyOf(presetId, presetMaterial);
             if (unsettled.some(m => keyOf(m) === key)) {
                 picker.value = key;
                 selectMovement(key);
@@ -96,12 +107,20 @@ document.getElementById('submitSettleBtn').addEventListener('click', async () =>
 
     const btn = document.getElementById('submitSettleBtn');
     btn.disabled = true;
-    btn.textContent = 'جاري الحفظ...';
+    btn.textContent = 'جاري الإرسال...';
 
     try {
-        await settleMovement(selectedMovement['ID'], selectedMovement['المادة'], { remainingInCar, returnToStore, returnToSupplier, notes });
-        showMessage('✅ تم حفظ التسوية بنجاح!');
-        setTimeout(() => { window.location.href = 'history.html'; }, 1200);
+        await submitSettlementRequest({
+            movementId: selectedMovement['ID'],
+            material: selectedMovement['المادة'],
+            remainingInCar,
+            returnToStore,
+            returnToSupplier,
+            notes,
+            requestedBy: currentUserEmail ? currentUserEmail.split('@')[0] : ''
+        });
+        showMessage('✅ تم إرسال طلب التسوية للمهندس، بانتظار الموافقة');
+        setTimeout(() => { window.location.href = 'history.html'; }, 1400);
     } catch (err) {
         showMessage('❌ خطأ: ' + err.message);
         btn.disabled = false;
