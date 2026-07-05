@@ -36,7 +36,7 @@ async function fetchProjectReportData() {
 }
 
 function rebuildProjectList() {
-    const projects = [...new Set(allMovements.map(m => m.project).filter(Boolean))].sort();
+    const projects = [...new Set(allMovements.map(m => m['المشروع']).filter(Boolean))].sort();
     const selected = projectSelect.value;
     projectSelect.innerHTML = '<option value="">كل المشاريع</option>';
     projects.forEach(p => {
@@ -48,7 +48,9 @@ function rebuildProjectList() {
 }
 
 function renderReport() {
-    const filtered = currentProjectFilter ? allMovements.filter(m => m.project === currentProjectFilter) : allMovements;
+    const filtered = currentProjectFilter
+        ? allMovements.filter(m => m['المشروع'] === currentProjectFilter)
+        : allMovements;
 
     if (filtered.length === 0) {
         projectReport.innerHTML = '<p class="text-center text-gray-500 text-sm mt-8 py-4">لا توجد حركات مسجلة بعد.</p>';
@@ -57,14 +59,26 @@ function renderReport() {
 
     const byProject = {};
     filtered.forEach(m => {
-        const proj = m.project || 'غير محدد';
-        const mat = m.material || 'غير محدد';
+        const proj = m['المشروع'] || 'غير محدد';
+        const mat = m['المادة'] || 'غير محدد';
         if (!byProject[proj]) byProject[proj] = {};
-        if (!byProject[proj][mat]) byProject[proj][mat] = { received: 0, returned: 0, unit: m.unit || '', phase: m.phase || 'عام' };
+        if (!byProject[proj][mat]) {
+            byProject[proj][mat] = {
+                received: 0,
+                consumed: 0,
+                remaining: 0,
+                returnedStore: 0,
+                returnedSupplier: 0,
+                unit: m['الوحدة'] || '',
+                phase: m['المرحلة'] || 'عام'
+            };
+        }
 
-        const qty = parseFloat(m.quantity) || 0;
-        if (m.type === 'استلام من مورد') byProject[proj][mat].received += qty;
-        else if (m.type === 'مرتجع من الموقع') byProject[proj][mat].returned += qty;
+        byProject[proj][mat].received += parseFloat(m['وارد (استلام)']) || 0;
+        byProject[proj][mat].consumed += parseFloat(m['مصروف على المشروع']) || 0;
+        byProject[proj][mat].remaining += parseFloat(m['متبقي في العربية']) || 0;
+        byProject[proj][mat].returnedStore += parseFloat(m['مرتجع للمستودع']) || 0;
+        byProject[proj][mat].returnedSupplier += parseFloat(m['مرتجع للمورد']) || 0;
     });
 
     projectReport.innerHTML = '';
@@ -75,14 +89,15 @@ function renderReport() {
         let rows = '';
         Object.keys(byProject[proj]).sort().forEach(mat => {
             const d = byProject[proj][mat];
-            const net = d.received - d.returned;
+            const totalReturned = d.returnedStore + d.returnedSupplier;
             rows += `
                 <tr>
                     <td class="text-right p-3">${mat}</td>
                     <td class="text-center p-3 text-xs text-gray-400">${d.phase}</td>
                     <td class="text-center p-3">${d.received}</td>
-                    <td class="text-center p-3">${d.returned}</td>
-                    <td class="text-center p-3 font-bold" style="color:#6B2D8B;">${net} ${d.unit}</td>
+                    <td class="text-center p-3">${d.consumed}</td>
+                    <td class="text-center p-3">${totalReturned}</td>
+                    <td class="text-center p-3 font-bold" style="color:#6B2D8B;">${d.remaining} ${d.unit}</td>
                 </tr>`;
         });
 
@@ -90,7 +105,7 @@ function renderReport() {
             <h2 class="text-lg font-bold text-gray-800 mb-3">${proj}</h2>
             <div style="overflow-x:auto;">
                 <table class="report-table">
-                    <thead><tr><th>المادة</th><th>المرحلة</th><th>مستلم</th><th>مرتجع</th><th>الصافي</th></tr></thead>
+                    <thead><tr><th>المادة</th><th>المرحلة</th><th>مستلم</th><th>مصروف</th><th>مرتجع</th><th>متبقي بالعربية</th></tr></thead>
                     <tbody>${rows}</tbody>
                 </table>
             </div>`;
