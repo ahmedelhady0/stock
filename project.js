@@ -23,7 +23,7 @@ onAuthStateChanged(auth, async (user) => {
 async function fetchProjectReportData() {
     try {
         projectReport.innerHTML = '<p class="text-center text-gray-500 text-sm py-8">جاري تحميل الحركات من جوجل شيت...</p>';
-        allMovements = await getMovements(); // كل الحركات (مش مفلترة على مستخدم معين، عشان الرصيد يبقى شامل)
+        allMovements = await getMovements();
         rebuildProjectList();
         renderReport();
     } catch (error) {
