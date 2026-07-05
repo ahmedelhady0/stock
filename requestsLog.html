@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سجل القرارات - مخزن شركة العزل</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="p-4 md:p-8 min-h-screen">
+    <div class="container p-6 md:p-8 w-full max-w-3xl mx-auto fade-in">
+        <a href="home.html" class="back-link">→ رجوع للرئيسية</a>
+        <h1 class="text-2xl title-gradient text-center mb-2">📋 سجل القرارات</h1>
+        <p class="text-center text-sm text-gray-500 mb-6">كل طلبات التسوية والتعديل التي تمت مراجعتها</p>
+
+        <div id="notAdminMsg" class="hidden text-center p-8 section-card">
+            <p class="text-gray-600">هذه الصفحة للمهندس/الإدارة فقط.</p>
+        </div>
+
+        <div class="flex gap-2 mb-5 overflow-x-auto pb-1">
+            <button class="filter-btn active" data-filter="all">الكل</button>
+            <button class="filter-btn" data-filter="موافق عليها">موافق عليها</button>
+            <button class="filter-btn" data-filter="مرفوضة">مرفوضة</button>
+        </div>
+
+        <div id="logList">
+            <p class="text-center text-gray-500 text-sm">جاري التحميل...</p>
+        </div>
+    </div>
+
+    <style>
+        .filter-btn {
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            background: white;
+            border: 2px solid #e0e0e0;
+            color: #666;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .filter-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: transparent;
+        }
+    </style>
+
+    <script type="module" src="requestsLog.js"></script>
+</body>
+</html>
