@@ -45,8 +45,15 @@ async function signUp() {
         const email = usernameToEmail(username);
         const cred = await createUserWithEmailAndPassword(auth, email, password);
 
-        // تسجيل المستخدم في شيت Users (بيحدد رتبته: admin لو اسمه admin بالظبط، غير كده supervisor)
-        await registerUser({ uid: cred.user.uid, username, email });
+        // تسجيل المستخدم في شيت Users
+        // لو فشل التسجيل في الشيت، مش هنفشّل الحساب كله — بس نسجّل الخطأ
+        try {
+            await registerUser({ uid: cred.user.uid, username, email });
+        } catch (sheetErr) {
+            console.warn('تحذير: فشل تسجيل المستخدم في الشيت:', sheetErr.message);
+            // الحساب اتعمل على Firebase بنجاح، بس الشيت ما اتحدثش
+            // هيتعرف عليه تلقائياً كـ supervisor عند أول تسجيل دخول
+        }
 
         showMessage('تم إنشاء الحساب! يمكنك تسجيل الدخول الآن');
         setTimeout(() => hideMessage(), 1800);
@@ -61,7 +68,6 @@ async function signUp() {
         }
     }
 }
-
 signInBtn?.addEventListener('click', signIn);
 signUpBtn?.addEventListener('click', signUp);
 closeMessageBtn?.addEventListener('click', hideMessage);
