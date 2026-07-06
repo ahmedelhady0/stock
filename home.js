@@ -1,4 +1,4 @@
-import { auth, showMessage, hideMessage, formatDate } from './firebase-config.js';
+import { auth, showMessage, hideMessage, formatDate, showBlockedMessage } from './firebase-config.js';
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getUserRole, getMovements } from './sheets-service.js';
 
@@ -6,6 +6,7 @@ const userWelcome = document.getElementById('userWelcome');
 const signOutBtn = document.getElementById('signOutBtn');
 const adminPanelBtn = document.getElementById('adminPanelBtn');
 const approvalsBtn = document.getElementById('approvalsBtn');
+const requestsLogBtn = document.getElementById('requestsLogBtn');
 const recentMovements = document.getElementById('recentMovements');
 
 signOutBtn?.addEventListener('click', async () => {
@@ -20,14 +21,26 @@ onAuthStateChanged(auth, async (user) => {
     if (userWelcome) userWelcome.textContent = `مرحباً: ${username}`;
 
     try {
-    const { role } = await getUserRole(user.email);
-    if (adminPanelBtn) adminPanelBtn.classList.toggle('hidden', role !== 'admin');
-    if (approvalsBtn) approvalsBtn.classList.toggle('hidden', role !== 'admin');
-    const requestsLogBtn = document.getElementById('requestsLogBtn');
-    if (requestsLogBtn) requestsLogBtn.classList.toggle('hidden', role !== 'admin');
-} catch (err) {
-    console.error('Role check error:', err);
-}
+        const info = await getUserRole(user.email);
+
+        // لو الحساب محجوب أو مش موجود في الشيت
+        if (info.role === 'blocked' || info.active === false) {
+            showBlockedMessage(info.reason);
+            // سجّل خروج تلقائي بعد 3 ثواني
+            setTimeout(async () => {
+                await signOut(auth);
+                window.location.href = 'index.html';
+            }, 3000);
+            return;
+        }
+
+        const role = info.role;
+        if (adminPanelBtn) adminPanelBtn.classList.toggle('hidden', role !== 'admin');
+        if (approvalsBtn) approvalsBtn.classList.toggle('hidden', role !== 'admin');
+        if (requestsLogBtn) requestsLogBtn.classList.toggle('hidden', role !== 'admin');
+    } catch (err) {
+        console.error('Role check error:', err);
+    }
 
     loadRecentMovements();
 });
