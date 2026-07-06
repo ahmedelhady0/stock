@@ -21,10 +21,12 @@ async function callPost(body) {
     const text = await res.text();
     let parsed;
     try { parsed = JSON.parse(text); } catch (e) { parsed = { ok: true }; }
-    if (parsed && parsed.ok === false) throw new Error(parsed.error || 'فشل الطلب');
+    // registerUser مش لازم يـ throw لو فشل — الحساب Firebase شغال على أي حال
+    if (parsed && parsed.ok === false && body.action !== 'registerUser') {
+        throw new Error(parsed.error || 'فشل الطلب');
+    }
     return parsed;
 }
-
 // ── القراءة ────────────────────────────────────────────────
 export async function getSetupData() {
     return callGet({ action: 'getSetupData' });
