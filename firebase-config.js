@@ -78,3 +78,11 @@ export function formatDate(ts) {
     const date = ts.toDate ? ts.toDate() : new Date(ts);
     return date.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
 }
+export function showBlockedMessage(reason) {
+    const messages = {
+        'not_registered': 'حسابك غير مسجل في النظام. تواصل مع المسؤول لتفعيل حسابك.',
+        'inactive': 'حسابك موقوف مؤقتاً. تواصل مع المسؤول لإعادة التفعيل.'
+    };
+    const text = messages[reason] || 'ليس لديك صلاحية الدخول. تواصل مع المسؤول.';
+    showMessage(text);
+}
