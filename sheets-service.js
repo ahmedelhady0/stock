@@ -21,12 +21,10 @@ async function callPost(body) {
     const text = await res.text();
     let parsed;
     try { parsed = JSON.parse(text); } catch (e) { parsed = { ok: true }; }
-    // registerUser مش لازم يـ throw لو فشل — الحساب Firebase شغال على أي حال
-    if (parsed && parsed.ok === false && body.action !== 'registerUser') {
-        throw new Error(parsed.error || 'فشل الطلب');
-    }
+    if (parsed && parsed.ok === false) throw new Error(parsed.error || 'فشل الطلب');
     return parsed;
 }
+
 // ── القراءة ────────────────────────────────────────────────
 export async function getSetupData() {
     return callGet({ action: 'getSetupData' });
@@ -56,6 +54,11 @@ export async function getEditRequests(status = null) {
     return data.requests || [];
 }
 
+export async function getAllRequestsLog() {
+    const data = await callGet({ action: 'getAllRequestsLog' });
+    return data.log || [];
+}
+
 // ── الكتابة ────────────────────────────────────────────────
 export async function logReceipt(movement) {
     return callPost({ action: 'logReceipt', movement });
@@ -81,6 +84,10 @@ export async function promoteUser(targetEmail, requesterEmail) {
     return callPost({ action: 'promoteUser', targetEmail, requesterEmail });
 }
 
+export async function toggleUserStatus(targetEmail, newStatus, requesterEmail) {
+    return callPost({ action: 'toggleUserStatus', targetEmail, newStatus, requesterEmail });
+}
+
 export async function submitSettlementRequest(data) {
     return callPost({ action: 'submitSettlementRequest', ...data });
 }
@@ -103,16 +110,4 @@ export async function approveEditRequest(id, reviewedBy, engineerNotes) {
 
 export async function rejectEditRequest(id, reviewedBy, engineerNotes) {
     return callPost({ action: 'rejectEditRequest', id, reviewedBy, engineerNotes });
-}
-export async function getAllRequestsLog() {
-    const data = await callGet({ action: 'getAllRequestsLog' });
-    return data.log || [];
-}
-export async function getUsers() {
-    const data = await callGet({ action: 'getUsers' });
-    return data.users || [];
-}
-
-export async function toggleUserStatus(targetEmail, newStatus, requesterEmail) {
-    return callPost({ action: 'toggleUserStatus', targetEmail, newStatus, requesterEmail });
 }
