@@ -85,15 +85,30 @@ function renderUsers(users) {
     }
     users.forEach(u => {
         const roleLabel = u.role === 'admin' ? 'مدير' : 'مشرف';
+        const isActive = String(u.status || '').trim() === 'نشط' || u.status === undefined;
         const item = document.createElement('div');
         item.className = 'admin-panel-item p-2 flex justify-between items-center';
         item.innerHTML = `
-            <span class="text-sm"><b>${u.username}</b> <span class="text-xs text-gray-400">(${roleLabel})</span></span>
-            ${u.role !== 'admin' ? `<button class="text-xs text-indigo-500 hover:text-indigo-700 font-semibold">ترقية لمدير</button>` : ''}
+            <span class="text-sm">
+                <b>${u.username}</b>
+                <span class="text-xs text-gray-400">(${roleLabel})</span>
+                <span class="text-xs ml-1 ${isActive ? 'text-emerald-600' : 'text-red-500'}">
+                    ${isActive ? '● نشط' : '● موقوف'}
+                </span>
+            </span>
+            <div class="flex gap-2">
+                ${u.role !== 'admin' ? `<button class="promote-btn text-xs text-indigo-500 hover:text-indigo-700 font-semibold">ترقية لمدير</button>` : ''}
+                ${u.username !== 'admin' ? `
+                    <button class="toggle-btn text-xs font-semibold ${isActive ? 'text-red-400 hover:text-red-600' : 'text-emerald-500 hover:text-emerald-700'}">
+                        ${isActive ? 'إيقاف' : 'تفعيل'}
+                    </button>
+                ` : ''}
+            </div>
         `;
-        const btn = item.querySelector('button');
-        if (btn) {
-            btn.addEventListener('click', async () => {
+
+        const promoteBtn = item.querySelector('.promote-btn');
+        if (promoteBtn) {
+            promoteBtn.addEventListener('click', async () => {
                 if (!confirm(`هل تريد ترقية "${u.username}" لمدير؟`)) return;
                 try {
                     await promoteUser(u.email, currentEmail);
@@ -105,6 +120,26 @@ function renderUsers(users) {
                 setTimeout(() => hideMessage(), 1200);
             });
         }
+
+        const toggleBtn = item.querySelector('.toggle-btn');
+        if (toggleBtn) {
+            toggleBtn.addEventListener('click', async () => {
+                const newStatus = isActive ? 'غير نشط' : 'نشط';
+                const confirmMsg = isActive
+                    ? `هل تريد إيقاف حساب "${u.username}"؟ لن يتمكن من الدخول.`
+                    : `هل تريد تفعيل حساب "${u.username}"؟`;
+                if (!confirm(confirmMsg)) return;
+                try {
+                    await toggleUserStatus(u.email, newStatus, currentEmail);
+                    showMessage(isActive ? '🔴 تم إيقاف الحساب' : '🟢 تم تفعيل الحساب');
+                    await refreshAll();
+                } catch (err) {
+                    showMessage('فشل التعديل: ' + err.message);
+                }
+                setTimeout(() => hideMessage(), 1200);
+            });
+        }
+
         usersList.appendChild(item);
     });
 }
