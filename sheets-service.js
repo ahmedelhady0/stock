@@ -108,3 +108,11 @@ export async function getAllRequestsLog() {
     const data = await callGet({ action: 'getAllRequestsLog' });
     return data.log || [];
 }
+export async function getUsers() {
+    const data = await callGet({ action: 'getUsers' });
+    return data.users || [];
+}
+
+export async function toggleUserStatus(targetEmail, newStatus, requesterEmail) {
+    return callPost({ action: 'toggleUserStatus', targetEmail, newStatus, requesterEmail });
+}
