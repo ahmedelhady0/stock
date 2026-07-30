@@ -17,7 +17,7 @@
                 </div>
                 <div class="flex flex-wrap gap-2">
                     <a href="admin.html" id="adminPanelBtn" class="btn-gray py-2 px-3 text-xs font-semibold hidden">لوحة الإدارة</a>
-                    <a href="approvals.html" id="approvalsBtn" class="btn-gray py-2 px-3 text-xs font-semibold hidden">موافقات التسوية</a>
+                    <a href="approvals.html" id="approvalsBtn" class="btn-gray py-2 px-3 text-xs font-semibold hidden">موافقات التعديل</a>
                     <a href="requestsLog.html" id="requestsLogBtn" class="btn-gray py-2 px-3 text-xs font-semibold hidden">سجل القرارات</a>
                 </div>
             </div>
@@ -29,15 +29,22 @@
             <a href="deliveries.html" class="action-card action-receive">
                 <span class="action-icon">➕</span>
                 <div>
-                    <div class="action-title">طلب حركة مواد جديد</div>
-                    <div class="action-desc">استلام من مورد / صرف للموقع / مرتجع للمخزن</div>
+                    <div class="action-title">حركة مواد جديدة</div>
+                    <div class="action-desc">صرف مباشر للمشروع أو تخزين في المستودع</div>
                 </div>
             </a>
-            <a href="project.html" class="action-card action-receive" style="border-color:#CE93D8;">
+            <a href="settlement.html" class="action-card action-return">
+                <span class="action-icon">🔄</span>
+                <div>
+                    <div class="action-title">مرتجع مواد</div>
+                    <div class="action-desc">تسجيل مرتجع من المشروع (يخصم الاستهلاك)</div>
+                </div>
+            </a>
+            <a href="project.html" class="action-card" style="border-color:#CE93D8;">
                 <span class="action-icon">📊</span>
                 <div>
                     <div class="action-title">رصيد المشاريع</div>
-                    <div class="action-desc">المستلم − المرتجع لكل مادة في كل مشروع</div>
+                    <div class="action-desc">المستهلك الفعلي لكل مادة في كل مشروع</div>
                 </div>
             </a>
         </div>

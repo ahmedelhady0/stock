@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>استلام مواد جديد - نظام مخزن شركة العزل</title>
+    <title>حركة مواد - نظام مخزن شركة العزل</title>
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -15,9 +15,26 @@
     <div class="container p-6 md:p-8 w-full max-w-2xl mx-auto fade-in">
         <a href="home.html" class="back-link block mb-4">→ رجوع للرئيسية</a>
 
-        <h1 class="text-2xl font-bold text-center mb-6 text-emerald-700">📦 استلام مواد جديد</h1>
+        <h1 class="text-2xl font-bold text-center mb-2 title-gradient">📦 حركة مواد</h1>
+        <p class="text-center text-sm text-gray-500 mb-6" id="subtitle">تسجل استهلاك مباشر على المشروع</p>
 
         <div class="section-card p-6 space-y-6">
+            <!-- نوع الحركة -->
+            <div class="bg-indigo-50 p-4 rounded-2xl border border-indigo-100">
+                <label class="block text-sm font-bold text-indigo-800 mb-3">نوع الحركة</label>
+                <div class="flex gap-3">
+                    <label class="flex-1 flex items-center justify-center gap-2 bg-white p-3 rounded-xl border-2 border-emerald-400 cursor-pointer hover:bg-emerald-50 transition" id="directLabel">
+                        <input type="radio" name="movementType" value="direct" checked class="accent-emerald-600">
+                        <span class="font-bold text-emerald-700 text-sm">🚚 صرف مباشر للمشروع</span>
+                    </label>
+                    <label class="flex-1 flex items-center justify-center gap-2 bg-white p-3 rounded-xl border-2 border-blue-300 cursor-pointer hover:bg-blue-50 transition" id="warehouseLabel">
+                        <input type="radio" name="movementType" value="warehouse" class="accent-blue-600">
+                        <span class="font-bold text-blue-700 text-sm">🏠 تخزين في المستودع</span>
+                    </label>
+                </div>
+                <p class="text-xs text-gray-500 mt-2 text-center" id="typeHint">✅ يستهلك تلقائياً على المشروع - لا يحتاج تسوية</p>
+            </div>
+
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2">المشروع</label>
                 <select id="matProject" required class="input-field block w-full p-3"></select>
@@ -42,7 +59,7 @@
             </div>
 
             <div class="bg-emerald-50 p-5 rounded-2xl border border-emerald-100">
-                <h3 class="text-sm font-bold text-emerald-800 mb-4">المواد (أدخل الكميات المستلمة)</h3>
+                <h3 class="text-sm font-bold text-emerald-800 mb-4" id="materialsHeading">المواد (الكمية = استهلاك على المشروع)</h3>
                 <div id="dynamicMaterialsContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <!-- يتم ملؤها ديناميكياً -->
                 </div>
@@ -55,8 +72,8 @@
 
             <div class="flex gap-3 pt-4">
                 <button onclick="location.reload()" class="flex-1 py-4 font-bold bg-gray-200 text-gray-700 rounded-2xl">تفريغ النموذج</button>
-                <button id="submitBtn" onclick="submitReceipt()" class="flex-1 py-4 font-bold bg-emerald-600 text-white rounded-2xl hover:bg-emerald-700 disabled:bg-gray-400" disabled>
-                    حفظ الاستلام
+                <button id="submitBtn" onclick="submitReceipt()" class="flex-1 py-4 font-bold text-white rounded-2xl hover:brightness-110 disabled:opacity-60 bg-emerald-600" disabled>
+                    حفظ الحركة
                 </button>
             </div>
         </div>

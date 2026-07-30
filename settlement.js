@@ -1,130 +1,210 @@
 import { auth, showMessage, hideMessage } from './firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getMovements, getSettlementRequests, submitSettlementRequest } from './sheets-service.js';
+import { getSetupData, getMovements, submitSettlementRequest } from './sheets-service.js';
 
-let unsettled = [];
-let currentUserEmail = null;
-let selectedMovement = null;
+let allMovements = [];
+let allSuppliers = [];
+let currentUser = null;
 
-const picker = document.getElementById('movementPicker');
-const pickerWrap = document.getElementById('pickerWrap');
-const settleFields = document.getElementById('settleFields');
-const noneMsg = document.getElementById('noneMsg');
-
-function isSettled(m) {
-    const consumed = parseFloat(m['مصروف على المشروع']) || 0;
-    const remaining = parseFloat(m['متبقي في العربية']) || 0;
-    const retStore = parseFloat(m['مرتجع للمستودع']) || 0;
-    const retSupplier = parseFloat(m['مرتجع للمورد']) || 0;
-    return (consumed + remaining + retStore + retSupplier) > 0;
-}
-
-function keyOf(idOrObj, material) {
-    if (typeof idOrObj === 'object') return `${idOrObj['ID']}|||${idOrObj['المادة']}`;
-    return `${idOrObj}|||${material}`;
-}
+const projectSelect = document.getElementById('returnProject');
+const materialSelect = document.getElementById('returnMaterial');
+const qtyInput = document.getElementById('returnQty');
+const consumptionSpan = document.getElementById('currentConsumption');
+const submitBtn = document.getElementById('submitReturnBtn');
 
 onAuthStateChanged(auth, async (user) => {
-    if (!user) return window.location.href = 'index.html';
-    currentUserEmail = user.email;
+    if (!user) { window.location.href = 'index.html'; return; }
+    currentUser = user;
+    await loadData();
+});
+
+async function loadData() {
     try {
-        const [all, pendingRequests] = await Promise.all([
+        const [movements, setup] = await Promise.all([
             getMovements(),
-            getSettlementRequests('قيد الموافقة')
+            getSetupData()
         ]);
-
-        const pendingKeys = new Set(pendingRequests.map(r => keyOf(r['معرف الحركة'], r['المادة'])));
-
-        unsettled = all.filter(m => !isSettled(m) && !pendingKeys.has(keyOf(m)));
-
-        if (unsettled.length === 0) {
-            pickerWrap.classList.add('hidden');
-            noneMsg.classList.remove('hidden');
-            if (pendingRequests.length > 0) {
-                noneMsg.textContent = 'كل الحركات المتبقية مرسلة كطلبات وبانتظار موافقة المهندس ⏳';
-            }
-            return;
-        }
-
-        picker.innerHTML = '<option value="">اختر حركة...</option>';
-        unsettled.forEach(m => {
-            picker.innerHTML += `<option value="${keyOf(m)}">${m['المشروع']} — ${m['المادة']} (${m['وارد (استلام)']} ${m['الوحدة']})</option>`;
-        });
-
-        const params = new URLSearchParams(window.location.search);
-        const presetId = params.get('id');
-        const presetMaterial = params.get('material');
-        if (presetId && presetMaterial) {
-            const key = keyOf(presetId, presetMaterial);
-            if (unsettled.some(m => keyOf(m) === key)) {
-                picker.value = key;
-                selectMovement(key);
-            }
-        }
+        allMovements = movements;
+        allSuppliers = setup.suppliers || [];
+        populateProjects();
+        populateSuppliers();
     } catch (err) {
         showMessage('فشل تحميل البيانات: ' + err.message);
     }
+}
+
+function populateSuppliers() {
+    const sel = document.getElementById('returnSupplier');
+    sel.innerHTML = '<option value="">اختر المورد...</option>';
+    allSuppliers.forEach(s => {
+        sel.innerHTML += `<option value="${s}">${s}</option>`;
+    });
+}
+
+function populateProjects() {
+    const projects = [...new Set(allMovements.map(m => m['المشروع']).filter(Boolean))];
+    const threeDaysAgo = new Date();
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+
+    const lastUse = {};
+    allMovements.forEach(m => {
+        if (m['المشروع']) {
+            const date = m['التاريخ'] ? new Date(m['التاريخ']) : null;
+            if (date && (!lastUse[m['المشروع']] || date > lastUse[m['المشروع']])) {
+                lastUse[m['المشروع']] = date;
+            }
+        }
+    });
+
+    projects.sort((a, b) => {
+        const aRecent = lastUse[a] && lastUse[a] >= threeDaysAgo ? 1 : 0;
+        const bRecent = lastUse[b] && lastUse[b] >= threeDaysAgo ? 1 : 0;
+        if (aRecent !== bRecent) return bRecent - aRecent;
+        return a.localeCompare(b);
+    });
+
+    projectSelect.innerHTML = '<option value="">اختر المشروع...</option>';
+    projects.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p;
+        opt.textContent = p;
+        if (lastUse[p] && lastUse[p] >= threeDaysAgo) opt.style.fontWeight = 'bold';
+        projectSelect.appendChild(opt);
+    });
+}
+
+document.querySelectorAll('input[name="returnDest"]').forEach(r => {
+    r.addEventListener('change', (e) => {
+        const wrap = document.getElementById('returnSupplierWrap');
+        wrap.classList.toggle('hidden', e.target.value !== 'supplier');
+    });
 });
 
-picker.addEventListener('change', (e) => selectMovement(e.target.value));
+projectSelect.addEventListener('change', () => {
+    const project = projectSelect.value;
+    materialSelect.innerHTML = '<option value="">اختر المادة...</option>';
+    materialSelect.disabled = true;
+    qtyInput.value = '';
+    consumptionSpan.textContent = '0';
 
-function selectMovement(key) {
-    selectedMovement = unsettled.find(m => keyOf(m) === key);
-    if (!selectedMovement) {
-        settleFields.classList.add('hidden');
+    if (!project) return;
+
+    const materials = [...new Set(
+        allMovements
+            .filter(m => m['المشروع'] === project)
+            .map(m => m['المادة'])
+            .filter(Boolean)
+    )].sort();
+
+    materials.forEach(mat => {
+        materialSelect.innerHTML += `<option value="${mat}">${mat}</option>`;
+    });
+    materialSelect.disabled = false;
+});
+
+materialSelect.addEventListener('change', () => {
+    updateConsumption();
+});
+
+function getNetConsumption(project, material) {
+    const projectMovements = allMovements.filter(m =>
+        m['المشروع'] === project && m['المادة'] === material
+    );
+
+    let totalReceived = 0;
+    let totalReturned = 0;
+
+    projectMovements.forEach(m => {
+        const qty = parseFloat(m['وارد (استلام)']) || 0;
+        const rt = parseFloat(m['مرتجع للمستودع']) || 0;
+        const rs = parseFloat(m['مرتجع للمورد']) || 0;
+        const consumed = parseFloat(m['مصروف على المشروع']) || 0;
+
+        // الحركات المباشرة: وارد = استهلاك
+        if (m.movementType === 'direct' || consumed > 0) {
+            totalReceived += qty;
+        } else if (!m.movementType || m.movementType === 'warehouse') {
+            totalReceived += qty;
+        }
+
+        totalReturned += rt + rs;
+    });
+
+    return Math.max(0, totalReceived - totalReturned);
+}
+
+function updateConsumption() {
+    const project = projectSelect.value;
+    const material = materialSelect.value;
+    if (project && material) {
+        const consumed = getNetConsumption(project, material);
+        consumptionSpan.textContent = consumed;
+    }
+}
+
+submitBtn.addEventListener('click', async () => {
+    const project = projectSelect.value;
+    const material = materialSelect.value;
+    const qty = parseFloat(qtyInput.value) || 0;
+
+    if (!project || !material) {
+        showMessage('اختر المشروع والمادة');
         return;
     }
-    document.getElementById('viewProject').textContent = selectedMovement['المشروع'] || '';
-    document.getElementById('viewPhase').textContent = selectedMovement['المرحلة'] || '';
-    document.getElementById('viewMaterial').textContent = selectedMovement['المادة'] || '';
-    document.getElementById('viewQty').textContent = selectedMovement['وارد (استلام)'] || 0;
-    document.getElementById('viewUnit').textContent = selectedMovement['الوحدة'] || '';
-    settleFields.classList.remove('hidden');
-    recalcConsumed();
-}
+    if (qty <= 0) {
+        showMessage('أدخل كمية صحيحة');
+        return;
+    }
 
-['remainingInCar', 'returnToStore', 'returnToSupplier'].forEach(id => {
-    document.getElementById(id).addEventListener('input', recalcConsumed);
-});
+    const currentConsumed = getNetConsumption(project, material);
+    if (qty > currentConsumed) {
+        showMessage(`الكمية المرتجعة (${qty}) أكبر من الاستهلاك الحالي (${currentConsumed})`);
+        return;
+    }
 
-function recalcConsumed() {
-    if (!selectedMovement) return;
-    const incoming = parseFloat(selectedMovement['وارد (استلام)']) || 0;
-    const remaining = parseFloat(document.getElementById('remainingInCar').value) || 0;
-    const retStore = parseFloat(document.getElementById('returnToStore').value) || 0;
-    const retSupplier = parseFloat(document.getElementById('returnToSupplier').value) || 0;
-    const consumed = Math.max(0, incoming - remaining - retStore - retSupplier);
-    document.getElementById('calcConsumed').textContent = consumed;
-}
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'جاري الحفظ...';
 
-document.getElementById('submitSettleBtn').addEventListener('click', async () => {
-    if (!selectedMovement) { showMessage('اختر حركة أولاً'); return; }
+    const dest = document.querySelector('input[name="returnDest"]:checked');
+    const toSupplier = dest && dest.value === 'supplier';
+    const supplierName = toSupplier ? (document.getElementById('returnSupplier').value || 'مورد') : '';
+    const notes = document.getElementById('returnNotes').value.trim();
 
-    const remainingInCar = parseFloat(document.getElementById('remainingInCar').value) || 0;
-    const returnToStore = parseFloat(document.getElementById('returnToStore').value) || 0;
-    const returnToSupplier = parseFloat(document.getElementById('returnToSupplier').value) || 0;
-    const notes = document.getElementById('settleNotes').value.trim();
+    // إيجاد الحركة الأصلية (أحدث استلام لهذه المادة)
+    const latest = allMovements
+        .filter(m => m['المشروع'] === project && m['المادة'] === material && m['المرحلة'])
+        .sort((a, b) => new Date(b['التاريخ'] || 0) - new Date(a['التاريخ'] || 0))[0];
 
-    const btn = document.getElementById('submitSettleBtn');
-    btn.disabled = true;
-    btn.textContent = 'جاري الإرسال...';
+    const origId = latest ? latest['ID'] : '';
 
     try {
         await submitSettlementRequest({
-            movementId: selectedMovement['ID'],
-            material: selectedMovement['المادة'],
-            remainingInCar,
-            returnToStore,
-            returnToSupplier,
-            notes,
-            requestedBy: currentUserEmail ? currentUserEmail.split('@')[0] : ''
+            movementId: origId,
+            material,
+            remainingInCar: 0,
+            returnToStore: toSupplier ? 0 : qty,
+            returnToSupplier: toSupplier ? qty : 0,
+            notes: notes || (toSupplier ? `مرتجع للمورد ${supplierName}` : `مرتجع للمستودع`),
+            requestedBy: currentUser ? currentUser.email.split('@')[0] : ''
         });
-        showMessage('✅ تم إرسال طلب التسوية للمهندس، بانتظار الموافقة');
-        setTimeout(() => { window.location.href = 'history.html'; }, 1400);
+
+        showMessage(`✅ تم إرسال طلب مرتجع ${qty} للمهندس بانتظار الموافقة`);
+        qtyInput.value = '';
+        document.getElementById('returnNotes').value = '';
+        document.getElementById('modalError')?.classList.add('hidden');
+        setTimeout(() => hideMessage(), 2000);
     } catch (err) {
-        showMessage('❌ خطأ: ' + err.message);
-        btn.disabled = false;
-        btn.textContent = 'حفظ التسوية';
+        const errDiv = document.getElementById('modalError');
+        if (errDiv) {
+            errDiv.textContent = '❌ ' + err.message;
+            errDiv.classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+            showMessage('❌ ' + err.message);
+        }
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'تسجيل المرتجع';
     }
 });
 

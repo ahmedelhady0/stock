@@ -44,7 +44,7 @@ async function loadRequests() {
 
 function renderAll(settlementReqs, editReqs) {
     if (settlementReqs.length === 0 && editReqs.length === 0) {
-        requestsList.innerHTML = '<p class="text-center text-gray-500 text-sm mt-8">لا توجد طلبات معلّقة 🎉</p>';
+        requestsList.innerHTML = '<p class="text-center text-gray-500 text-sm mt-8">🎉 لا توجد طلبات معلّقة</p>';
         return;
     }
 
@@ -53,7 +53,7 @@ function renderAll(settlementReqs, editReqs) {
     if (settlementReqs.length > 0) {
         const heading = document.createElement('h2');
         heading.className = 'text-lg font-bold text-gray-800 mb-3 mt-2';
-        heading.textContent = '⚖️ طلبات التسوية';
+        heading.textContent = '🔄 طلبات المرتجع';
         requestsList.appendChild(heading);
         settlementReqs.forEach(r => requestsList.appendChild(renderSettlementCard(r)));
     }
@@ -80,11 +80,11 @@ function renderSettlementCard(r) {
             <span class="text-xs text-gray-400">${formatDate(r['تاريخ الطلب'])}</span>
         </div>
         <div class="grid grid-cols-3 gap-3 text-center text-sm bg-gray-50 rounded-xl p-3 mb-3">
-            <div><p class="text-gray-500 text-xs">متبقي بالعربية</p><p class="font-bold">${r['متبقي في العربية'] || 0}</p></div>
             <div><p class="text-gray-500 text-xs">مرتجع للمستودع</p><p class="font-bold">${r['مرتجع للمستودع'] || 0}</p></div>
             <div><p class="text-gray-500 text-xs">مرتجع للمورد</p><p class="font-bold">${r['مرتجع للمورد'] || 0}</p></div>
+            <div><p class="text-gray-500 text-xs">متبقي</p><p class="font-bold">${r['متبقي في العربية'] || 0}</p></div>
         </div>
-        ${r['ملاحظات المشرف'] ? `<p class="text-xs text-gray-500 mb-3">ملاحظات المشرف: ${r['ملاحظات المشرف']}</p>` : ''}
+        ${r['ملاحظات المشرف'] ? `<p class="text-xs text-gray-500 mb-3">ملاحظات: ${r['ملاحظات المشرف']}</p>` : ''}
         <textarea class="engineer-notes input-field w-full p-2 text-sm mb-3" rows="2" placeholder="ملاحظات المهندس (اختياري)"></textarea>
         <div class="flex gap-3">
             <button class="approve-settle-btn flex-1 py-2 bg-emerald-600 text-white rounded-xl font-bold text-sm" data-id="${r['ID']}">✅ موافقة</button>
@@ -98,7 +98,7 @@ function renderSettlementCard(r) {
         btn.disabled = true; btn.textContent = 'جاري الموافقة...';
         try {
             await approveSettlementRequest(btn.dataset.id, currentUsername, notes);
-            showMessage('✅ تمت الموافقة على التسوية بنجاح');
+            showMessage('✅ تمت الموافقة على المرتجع بنجاح');
             setTimeout(() => location.reload(), 1000);
         } catch (err) {
             showMessage('❌ فشل: ' + err.message);

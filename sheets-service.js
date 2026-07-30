@@ -25,14 +25,37 @@ async function callPost(body) {
     return parsed;
 }
 
-// ── القراءة ────────────────────────────────────────────────
-export async function getSetupData() {
-    return callGet({ action: 'getSetupData' });
+// ── كاش محلي (localStorage) ─────────────────────────────
+function cacheGet(key, ttlMs, fetcher) {
+    try {
+        const cached = localStorage.getItem(key);
+        if (cached) {
+            const { data, ts } = JSON.parse(cached);
+            if (Date.now() - ts < ttlMs) return Promise.resolve(data);
+        }
+    } catch (_) {}
+    return fetcher().then(data => {
+        try { localStorage.setItem(key, JSON.stringify({ data, ts: Date.now() })); } catch (_) {}
+        return data;
+    });
 }
 
-export async function getMovements(email = null) {
-    const data = await callGet({ action: 'getMovements', email });
-    return data.movements || [];
+function bustCache(key) {
+    try { localStorage.removeItem(key); } catch (_) {}
+}
+
+// ── القراءة ────────────────────────────────────────────────
+export async function getSetupData(forceRefresh = false) {
+    if (forceRefresh) bustCache('cache_setup');
+    return cacheGet('cache_setup', 60 * 60 * 1000, () => callGet({ action: 'getSetupData' }));
+}
+
+export async function getMovements(email = null, forceRefresh = false) {
+    const cacheKey = 'cache_movements_' + (email || 'all');
+    if (forceRefresh) bustCache(cacheKey);
+    return cacheGet(cacheKey, 5 * 60 * 1000, () =>
+        callGet({ action: 'getMovements', email }).then(d => d.movements || [])
+    );
 }
 
 export async function getUserRole(email) {
@@ -59,9 +82,22 @@ export async function getAllRequestsLog() {
     return data.log || [];
 }
 
+// ── تنظيف الكاش ──────────────────────────────────────────
+export function clearCache() {
+    try {
+        localStorage.removeItem('cache_setup');
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith('cache_movements_')) localStorage.removeItem(key);
+        }
+    } catch (_) {}
+}
+
 // ── الكتابة ────────────────────────────────────────────────
 export async function logReceipt(movement) {
-    return callPost({ action: 'logReceipt', movement });
+    const r = await callPost({ action: 'logReceipt', movement });
+    clearCache();
+    return r;
 }
 
 export async function registerUser(userData) {
@@ -69,15 +105,21 @@ export async function registerUser(userData) {
 }
 
 export async function addProject(name, requesterEmail) {
-    return callPost({ action: 'addProject', name, requesterEmail });
+    const r = await callPost({ action: 'addProject', name, requesterEmail });
+    clearCache();
+    return r;
 }
 
 export async function addMaterial(phase, name, unit, requesterEmail) {
-    return callPost({ action: 'addMaterial', phase, name, unit, requesterEmail });
+    const r = await callPost({ action: 'addMaterial', phase, name, unit, requesterEmail });
+    clearCache();
+    return r;
 }
 
 export async function addSupplier(name, requesterEmail) {
-    return callPost({ action: 'addSupplier', name, requesterEmail });
+    const r = await callPost({ action: 'addSupplier', name, requesterEmail });
+    clearCache();
+    return r;
 }
 
 export async function promoteUser(targetEmail, requesterEmail) {
@@ -89,25 +131,37 @@ export async function toggleUserStatus(targetEmail, newStatus, requesterEmail) {
 }
 
 export async function submitSettlementRequest(data) {
-    return callPost({ action: 'submitSettlementRequest', ...data });
+    const r = await callPost({ action: 'submitSettlementRequest', ...data });
+    clearCache();
+    return r;
 }
 
 export async function approveSettlementRequest(id, reviewedBy, engineerNotes) {
-    return callPost({ action: 'approveSettlementRequest', id, reviewedBy, engineerNotes });
+    const r = await callPost({ action: 'approveSettlementRequest', id, reviewedBy, engineerNotes });
+    clearCache();
+    return r;
 }
 
 export async function rejectSettlementRequest(id, reviewedBy, engineerNotes) {
-    return callPost({ action: 'rejectSettlementRequest', id, reviewedBy, engineerNotes });
+    const r = await callPost({ action: 'rejectSettlementRequest', id, reviewedBy, engineerNotes });
+    clearCache();
+    return r;
 }
 
 export async function submitEditRequest(data) {
-    return callPost({ action: 'submitEditRequest', ...data });
+    const r = await callPost({ action: 'submitEditRequest', ...data });
+    clearCache();
+    return r;
 }
 
 export async function approveEditRequest(id, reviewedBy, engineerNotes) {
-    return callPost({ action: 'approveEditRequest', id, reviewedBy, engineerNotes });
+    const r = await callPost({ action: 'approveEditRequest', id, reviewedBy, engineerNotes });
+    clearCache();
+    return r;
 }
 
 export async function rejectEditRequest(id, reviewedBy, engineerNotes) {
-    return callPost({ action: 'rejectEditRequest', id, reviewedBy, engineerNotes });
+    const r = await callPost({ action: 'rejectEditRequest', id, reviewedBy, engineerNotes });
+    clearCache();
+    return r;
 }

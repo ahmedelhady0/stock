@@ -1,14 +1,46 @@
 import { auth, showMessage, hideMessage } from './firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getSetupData, logReceipt } from './sheets-service.js';
+import { getSetupData, getMovements, logReceipt } from './sheets-service.js';
 
 let currentUser = null;
 let allMaterials = [];
+let movementType = 'direct';
+let allMovements = [];
 
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('matProject').addEventListener('change', handleProjectChange);
     document.getElementById('matPhase').addEventListener('change', handlePhaseChange);
+
+    document.querySelectorAll('input[name="movementType"]').forEach(r => {
+        r.addEventListener('change', (e) => {
+            movementType = e.target.value;
+            updateMovementTypeUI();
+        });
+    });
 });
+
+function updateMovementTypeUI() {
+    const hint = document.getElementById('typeHint');
+    const heading = document.getElementById('materialsHeading');
+    const btn = document.getElementById('submitBtn');
+    const supplierLabel = document.querySelector('label[for="matSupplier"]');
+
+    if (movementType === 'direct') {
+        hint.textContent = '✅ المادة تستهلك تلقائياً على المشروع - لا تحتاج تسوية';
+        hint.className = 'text-xs text-emerald-600 mt-2 text-center font-semibold';
+        heading.textContent = 'المواد (الكمية = استهلاك على المشروع)';
+        btn.className = 'flex-1 py-4 font-bold bg-emerald-600 text-white rounded-2xl hover:brightness-110 disabled:bg-gray-400';
+        document.getElementById('directLabel').className = 'flex-1 flex items-center justify-center gap-2 bg-white p-3 rounded-xl border-2 border-emerald-500 cursor-pointer bg-emerald-50 transition';
+        document.getElementById('warehouseLabel').className = 'flex-1 flex items-center justify-center gap-2 bg-white p-3 rounded-xl border-2 border-blue-300 cursor-pointer hover:bg-blue-50 transition';
+    } else {
+        hint.textContent = '🏠 المواد تُخزّن في المستودع - بعدين تقدر تصرفها على المشاريع';
+        hint.className = 'text-xs text-blue-600 mt-2 text-center font-semibold';
+        heading.textContent = 'المواد (كميات واردة للمستودع)';
+        btn.className = 'flex-1 py-4 font-bold bg-blue-600 text-white rounded-2xl hover:brightness-110 disabled:bg-gray-400';
+        document.getElementById('directLabel').className = 'flex-1 flex items-center justify-center gap-2 bg-white p-3 rounded-xl border-2 border-emerald-300 cursor-pointer hover:bg-emerald-50 transition';
+        document.getElementById('warehouseLabel').className = 'flex-1 flex items-center justify-center gap-2 bg-white p-3 rounded-xl border-2 border-blue-500 cursor-pointer bg-blue-50 transition';
+    }
+}
 
 onAuthStateChanged(auth, async (user) => {
     if (!user) { window.location.href = 'index.html'; return; }
@@ -19,14 +51,40 @@ onAuthStateChanged(auth, async (user) => {
 
 async function loadSetupData() {
     try {
-        const data = await getSetupData();
-        console.log('Setup data:', data); // للتصحيح
+        const [data, movements] = await Promise.all([
+            getSetupData(),
+            getMovements()
+        ]);
+        allMovements = movements || [];
         allMaterials = data.materials || [];
+
+        // ترتيب المشاريع: الأحدث استخداماً أولاً (آخر 3 أيام)
+        const threeDaysAgo = new Date();
+        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+
+        const recentProjects = new Set();
+        allMovements.forEach(m => {
+            const date = m['التاريخ'] ? new Date(m['التاريخ']) : null;
+            if (date && date >= threeDaysAgo && m['المشروع']) {
+                recentProjects.add(m['المشروع']);
+            }
+        });
+
+        const sorted = [...(data.projects || [])].sort((a, b) => {
+            const aRecent = recentProjects.has(a) ? 1 : 0;
+            const bRecent = recentProjects.has(b) ? 1 : 0;
+            if (aRecent !== bRecent) return bRecent - aRecent;
+            return a.localeCompare(b);
+        });
 
         const projSelect = document.getElementById('matProject');
         projSelect.innerHTML = '<option value="">اختر المشروع...</option>';
-        (data.projects || []).forEach(p => {
-            projSelect.innerHTML += `<option value="${p}">${p}</option>`;
+        sorted.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p;
+            opt.textContent = p;
+            if (recentProjects.has(p)) opt.style.fontWeight = 'bold';
+            projSelect.appendChild(opt);
         });
 
         const supSelect = document.getElementById('matSupplier');
@@ -97,6 +155,12 @@ window.submitReceipt = async function submitReceipt() {
         return;
     }
 
+    // في حالة "مستودع" المورد إجباري
+    if (movementType === 'warehouse' && !supplier) {
+        showMessage('يرجى اختيار المورد (المواد الواردة للمستودع)');
+        return;
+    }
+
     const items = [...document.querySelectorAll('.qty-input')]
         .map(inp => ({
             material: inp.dataset.name,
@@ -111,9 +175,10 @@ window.submitReceipt = async function submitReceipt() {
     }
 
     submitBtn.disabled = true;
-    submitBtn.textContent = 'جاري الحفظ...';
+    submitBtn.innerHTML = '<span class="spinner"></span> جاري الحفظ...';
 
     const batchId = 'REQ-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+    const isDirect = movementType === 'direct';
 
     try {
         const promises = items.map(item =>
@@ -124,9 +189,11 @@ window.submitReceipt = async function submitReceipt() {
                 material: item.material,
                 unit: item.unit,
                 quantity: item.quantity,
-                supplier: supplier || 'غير محدد',
+                consumed: isDirect ? item.quantity : 0, // مباشر = استهلاك فوري
+                supplier: supplier || (isDirect ? 'صرف مباشر' : 'غير محدد'),
                 contractor: createdBy,
-                notes
+                movementType: isDirect ? 'direct' : 'warehouse',
+                notes: isDirect ? `صرف مباشر - ${notes}` : `وارد للمستودع - ${notes}`
             })
         );
 
@@ -139,7 +206,7 @@ window.submitReceipt = async function submitReceipt() {
         console.error(err);
         showMessage('❌ خطأ أثناء الحفظ: ' + err.message);
         submitBtn.disabled = false;
-        submitBtn.textContent = 'حفظ الاستلام';
+        submitBtn.textContent = 'حفظ الحركة';
     }
 };
 

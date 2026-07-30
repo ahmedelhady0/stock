@@ -1,6 +1,3 @@
-// ═══════════════════════════════════════════════════════════
-// رصيد المشاريع — Firebase Auth للدخول + Google Sheets للحركات
-// ═══════════════════════════════════════════════════════════
 import { auth } from './firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getMovements } from './sheets-service.js';
@@ -10,6 +7,13 @@ const projectReport = document.getElementById('projectReport');
 
 let allMovements = [];
 let currentProjectFilter = '';
+
+function isReturn(m) {
+    const t = String(m['نوع الحركة'] || m.movementType || '').trim();
+    if (t.indexOf('مرتجع') !== -1) return true;
+    if (parseFloat(m['مرتجع للمستودع']) > 0 || parseFloat(m['مرتجع للمورد']) > 0) return true;
+    return false;
+}
 
 onAuthStateChanged(auth, async (user) => {
     if (!user) { window.location.href = 'index.html'; return; }
@@ -61,12 +65,12 @@ function renderReport() {
     filtered.forEach(m => {
         const proj = m['المشروع'] || 'غير محدد';
         const mat = m['المادة'] || 'غير محدد';
+        const ret = isReturn(m);
+
         if (!byProject[proj]) byProject[proj] = {};
         if (!byProject[proj][mat]) {
             byProject[proj][mat] = {
                 received: 0,
-                consumed: 0,
-                remaining: 0,
                 returnedStore: 0,
                 returnedSupplier: 0,
                 unit: m['الوحدة'] || '',
@@ -74,11 +78,20 @@ function renderReport() {
             };
         }
 
-        byProject[proj][mat].received += parseFloat(m['وارد (استلام)']) || 0;
-        byProject[proj][mat].consumed += parseFloat(m['مصروف على المشروع']) || 0;
-        byProject[proj][mat].remaining += parseFloat(m['متبقي في العربية']) || 0;
-        byProject[proj][mat].returnedStore += parseFloat(m['مرتجع للمستودع']) || 0;
-        byProject[proj][mat].returnedSupplier += parseFloat(m['مرتجع للمورد']) || 0;
+        if (ret) {
+            byProject[proj][mat].returnedStore += parseFloat(m['مرتجع للمستودع']) || 0;
+            byProject[proj][mat].returnedSupplier += parseFloat(m['مرتجع للمورد']) || 0;
+            // لو movementType=return ومافيش مرتجع تفصيلي، نستخدم الكمية كمرتجع
+            if (!parseFloat(m['مرتجع للمستودع']) && !parseFloat(m['مرتجع للمورد'])) {
+                byProject[proj][mat].returnedStore += parseFloat(m['وارد (استلام)']) || 0;
+            }
+        } else {
+            byProject[proj][mat].received += parseFloat(m['وارد (استلام)']) || 0;
+            // الحركات المباشرة: وارد = استهلاك
+            if (m.movementType === 'direct' || parseFloat(m['مصروف على المشروع']) > 0) {
+                // already counted in received, will show as consumed
+            }
+        }
     });
 
     projectReport.innerHTML = '';
@@ -90,14 +103,15 @@ function renderReport() {
         Object.keys(byProject[proj]).sort().forEach(mat => {
             const d = byProject[proj][mat];
             const totalReturned = d.returnedStore + d.returnedSupplier;
+            const netConsumed = Math.max(0, d.received - totalReturned);
             rows += `
                 <tr>
                     <td class="text-right p-3">${mat}</td>
                     <td class="text-center p-3 text-xs text-gray-400">${d.phase}</td>
                     <td class="text-center p-3">${d.received}</td>
-                    <td class="text-center p-3">${d.consumed}</td>
+                    <td class="text-center p-3 font-bold text-emerald-700">${netConsumed}</td>
                     <td class="text-center p-3">${totalReturned}</td>
-                    <td class="text-center p-3 font-bold" style="color:#6B2D8B;">${d.remaining} ${d.unit}</td>
+                    <td class="text-center p-3 text-xs text-gray-400">${d.unit}</td>
                 </tr>`;
         });
 
@@ -105,7 +119,7 @@ function renderReport() {
             <h2 class="text-lg font-bold text-gray-800 mb-3">${proj}</h2>
             <div style="overflow-x:auto;">
                 <table class="report-table">
-                    <thead><tr><th>المادة</th><th>المرحلة</th><th>مستلم</th><th>مصروف</th><th>مرتجع</th><th>متبقي بالعربية</th></tr></thead>
+                    <thead><tr><th>المادة</th><th>المرحلة</th><th>وارد</th><th>مستهلك</th><th>مرتجع</th><th>الوحدة</th></tr></thead>
                     <tbody>${rows}</tbody>
                 </table>
             </div>`;
