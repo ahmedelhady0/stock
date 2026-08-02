@@ -37,7 +37,12 @@
 
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2">المشروع</label>
-                <select id="matProject" required class="input-field block w-full p-3"></select>
+                <div class="flex gap-2">
+                    <select id="matProject" required class="input-field block w-full p-3"></select>
+                    <button type="button" id="refreshBtn" class="px-4 rounded-xl border-2 border-gray-300 text-gray-500 hover:bg-gray-100 transition" title="تحديث القوائم">
+                        ⟳
+                    </button>
+                </div>
             </div>
 
             <div>
@@ -53,8 +58,13 @@
                     <select id="matSupplier" class="input-field block w-full p-3"></select>
                 </div>
                 <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">اسم المشرف</label>
-                    <input type="text" id="createdBy" required class="input-field block w-full p-3" placeholder="اسمك الثنائي">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">رقم الفاتورة</label>
+                    <input type="text" id="invoiceNo" class="input-field block w-full p-3" placeholder="رقم الفاتورة (اختياري)">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">صورة الفاتورة (اختياري)</label>
+                    <input type="file" id="invoiceFile" accept="image/*" capture="environment" class="block w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:bg-indigo-50 file:text-indigo-700 file:font-semibold hover:file:bg-indigo-100 cursor-pointer">
+                    <p class="text-xs text-gray-400 mt-1">تترفع على Google Drive وتتسجل كرابط في الشيت</p>
                 </div>
             </div>
 

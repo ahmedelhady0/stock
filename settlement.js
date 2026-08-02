@@ -4,6 +4,7 @@ import { getSetupData, getMovements, submitSettlementRequest } from './sheets-se
 
 let allMovements = [];
 let allSuppliers = [];
+let allSetupProjects = [];
 let currentUser = null;
 
 const projectSelect = document.getElementById('returnProject');
@@ -18,14 +19,15 @@ onAuthStateChanged(auth, async (user) => {
     await loadData();
 });
 
-async function loadData() {
+async function loadData(forceRefresh = false) {
     try {
         const [movements, setup] = await Promise.all([
-            getMovements(),
-            getSetupData()
+            getMovements(null, forceRefresh),
+            getSetupData(forceRefresh)
         ]);
         allMovements = movements;
         allSuppliers = setup.suppliers || [];
+        allSetupProjects = setup.projects || [];
         populateProjects();
         populateSuppliers();
     } catch (err) {
@@ -42,7 +44,11 @@ function populateSuppliers() {
 }
 
 function populateProjects() {
-    const projects = [...new Set(allMovements.map(m => m['المشروع']).filter(Boolean))];
+    // دمج مشاريع الشيت + مشاريع سجل الحركات (حتى اللي مالهوش حركات)
+    const fromSetup = allSetupProjects.filter(Boolean);
+    const fromLog = allMovements.map(m => m['المشروع']).filter(Boolean);
+    const projects = [...new Set([...fromSetup, ...fromLog])];
+
     const threeDaysAgo = new Date();
     threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
 
@@ -78,6 +84,22 @@ document.querySelectorAll('input[name="returnDest"]').forEach(r => {
         const wrap = document.getElementById('returnSupplierWrap');
         wrap.classList.toggle('hidden', e.target.value !== 'supplier');
     });
+});
+
+document.getElementById('refreshBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('refreshBtn');
+    btn.disabled = true;
+    btn.textContent = '...';
+    try {
+        await loadData(true);
+        showMessage('✅ تم تحديث القوائم');
+        setTimeout(() => hideMessage(), 1500);
+    } catch (err) {
+        showMessage('❌ فشل التحديث: ' + err.message);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '⟳';
+    }
 });
 
 projectSelect.addEventListener('change', () => {

@@ -47,7 +47,7 @@ function bustCache(key) {
 // ── القراءة ────────────────────────────────────────────────
 export async function getSetupData(forceRefresh = false) {
     if (forceRefresh) bustCache('cache_setup');
-    return cacheGet('cache_setup', 60 * 60 * 1000, () => callGet({ action: 'getSetupData' }));
+    return cacheGet('cache_setup', 5 * 60 * 1000, () => callGet({ action: 'getSetupData' }));
 }
 
 export async function getMovements(email = null, forceRefresh = false) {
@@ -98,6 +98,10 @@ export async function logReceipt(movement) {
     const r = await callPost({ action: 'logReceipt', movement });
     clearCache();
     return r;
+}
+
+export async function uploadInvoiceImage(base64, name) {
+    return callPost({ action: 'uploadInvoiceImage', image: base64, fileName: name });
 }
 
 export async function registerUser(userData) {

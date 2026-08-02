@@ -1,15 +1,39 @@
 import { auth, showMessage, hideMessage } from './firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getSetupData, getMovements, logReceipt } from './sheets-service.js';
+import { getSetupData, getMovements, logReceipt, uploadInvoiceImage } from './sheets-service.js';
 
 let currentUser = null;
 let allMaterials = [];
 let movementType = 'direct';
 let allMovements = [];
 
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('matProject').addEventListener('change', handleProjectChange);
     document.getElementById('matPhase').addEventListener('change', handlePhaseChange);
+    document.getElementById('refreshBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('refreshBtn');
+        btn.disabled = true;
+        btn.textContent = '...';
+        try {
+            await loadSetupData(true);
+            showMessage('✅ تم تحديث القوائم');
+            setTimeout(() => hideMessage(), 1500);
+        } catch (err) {
+            showMessage('❌ فشل التحديث: ' + err.message);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '⟳';
+        }
+    });
 
     document.querySelectorAll('input[name="movementType"]').forEach(r => {
         r.addEventListener('change', (e) => {
@@ -45,15 +69,14 @@ function updateMovementTypeUI() {
 onAuthStateChanged(auth, async (user) => {
     if (!user) { window.location.href = 'index.html'; return; }
     currentUser = user;
-    document.getElementById('createdBy').value = user.email.split('@')[0];
     await loadSetupData();
 });
 
-async function loadSetupData() {
+async function loadSetupData(forceRefresh = false) {
     try {
         const [data, movements] = await Promise.all([
-            getSetupData(),
-            getMovements()
+            getSetupData(forceRefresh),
+            getMovements(null, forceRefresh)
         ]);
         allMovements = movements || [];
         allMaterials = data.materials || [];
@@ -146,12 +169,13 @@ window.submitReceipt = async function submitReceipt() {
     const project = document.getElementById('matProject').value;
     const phase = document.getElementById('matPhase').value;
     const supplier = document.getElementById('matSupplier').value;
-    const createdBy = document.getElementById('createdBy').value.trim();
+    const createdBy = currentUser ? currentUser.email.split('@')[0] : '';
+    const invoice = document.getElementById('invoiceNo').value.trim();
     const notes = document.getElementById('motionNotes').value.trim();
     const submitBtn = document.getElementById('submitBtn');
 
-    if (!project || !phase || !createdBy) {
-        showMessage('يرجى ملء المشروع والمرحلة واسم المشرف');
+    if (!project || !phase) {
+        showMessage('يرجى ملء المشروع والمرحلة');
         return;
     }
 
@@ -177,6 +201,22 @@ window.submitReceipt = async function submitReceipt() {
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span class="spinner"></span> جاري الحفظ...';
 
+    // رفع صورة الفاتورة أولاً (مرة واحدة لكل الحركة)
+    let invoiceImageUrl = '';
+    const fileInput = document.getElementById('invoiceFile');
+    if (fileInput && fileInput.files && fileInput.files[0]) {
+        try {
+            const base64 = await fileToBase64(fileInput.files[0]);
+            const upload = await uploadInvoiceImage(base64, fileInput.files[0].name);
+            invoiceImageUrl = upload.url || '';
+        } catch (err) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = 'حفظ الحركة';
+            showMessage('❌ فشل رفع صورة الفاتورة: ' + err.message);
+            return;
+        }
+    }
+
     const batchId = 'REQ-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
     const isDirect = movementType === 'direct';
 
@@ -192,6 +232,8 @@ window.submitReceipt = async function submitReceipt() {
                 consumed: isDirect ? item.quantity : 0, // مباشر = استهلاك فوري
                 supplier: supplier || (isDirect ? 'صرف مباشر' : 'غير محدد'),
                 contractor: createdBy,
+                invoice: invoice,
+                invoiceImageUrl,
                 movementType: isDirect ? 'direct' : 'warehouse',
                 notes: isDirect ? `صرف مباشر - ${notes}` : `وارد للمستودع - ${notes}`
             })

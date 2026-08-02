@@ -17,9 +17,14 @@
             <div id="modalError" class="hidden bg-red-50 border border-red-200 text-red-700 text-sm font-semibold p-3 rounded-xl text-center"></div>
             <div>
                 <label class="block text-sm font-semibold mb-2">اختر المشروع</label>
-                <select id="returnProject" class="input-field w-full p-3">
-                    <option value="">اختر المشروع...</option>
-                </select>
+                <div class="flex gap-2">
+                    <select id="returnProject" class="input-field w-full p-3">
+                        <option value="">اختر المشروع...</option>
+                    </select>
+                    <button type="button" id="refreshBtn" class="px-4 rounded-xl border-2 border-gray-300 text-gray-500 hover:bg-gray-100 transition" title="تحديث القوائم">
+                        ⟳
+                    </button>
+                </div>
             </div>
 
             <div>
