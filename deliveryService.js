@@ -1,19 +1,24 @@
 import { auth, showMessage, hideMessage } from './firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getSetupData, getMovements, logReceipt, uploadInvoiceImage } from './sheets-service.js';
+import { getSetupData, getMovements, logReceipt } from './sheets-service.js';
 
 let currentUser = null;
 let allMaterials = [];
 let movementType = 'direct';
 let allMovements = [];
 
-function fileToBase64(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-    });
+const IMGBB_KEY = '8621949d7967c0c66d9ab1290454d70e';
+const IMGBB_ALBUM = '9sJWHv';
+
+async function uploadInvoiceToImgBB(file) {
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('key', IMGBB_KEY);
+    formData.append('album', IMGBB_ALBUM);
+    const res = await fetch('https://api.imgbb.com/1/upload', { method: 'POST', body: formData });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error?.message || 'فشل رفع الصورة');
+    return data.data.url;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -206,9 +211,7 @@ window.submitReceipt = async function submitReceipt() {
     const fileInput = document.getElementById('invoiceFile');
     if (fileInput && fileInput.files && fileInput.files[0]) {
         try {
-            const base64 = await fileToBase64(fileInput.files[0]);
-            const upload = await uploadInvoiceImage(base64, fileInput.files[0].name);
-            invoiceImageUrl = upload.url || '';
+            invoiceImageUrl = await uploadInvoiceToImgBB(fileInput.files[0]);
         } catch (err) {
             submitBtn.disabled = false;
             submitBtn.innerHTML = 'حفظ الحركة';

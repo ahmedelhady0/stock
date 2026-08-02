@@ -100,10 +100,6 @@ export async function logReceipt(movement) {
     return r;
 }
 
-export async function uploadInvoiceImage(base64, name) {
-    return callPost({ action: 'uploadInvoiceImage', image: base64, fileName: name });
-}
-
 export async function registerUser(userData) {
     return callPost({ action: 'registerUser', ...userData });
 }
