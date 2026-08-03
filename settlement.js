@@ -5,6 +5,7 @@ import { getSetupData, getMovements, submitSettlementRequest } from './sheets-se
 let allMovements = [];
 let allSuppliers = [];
 let allSetupProjects = [];
+let projectDates = {};
 let currentUser = null;
 
 const projectSelect = document.getElementById('returnProject');
@@ -35,6 +36,7 @@ async function loadData(forceRefresh = false) {
         allMovements = movements;
         allSuppliers = setup.suppliers || [];
         allSetupProjects = setup.projects || [];
+        projectDates = setup.projectDates || {};
         populateProjects();
         populateSuppliers();
 
@@ -83,8 +85,10 @@ function populateProjects() {
     projects.forEach(p => {
         const opt = document.createElement('option');
         opt.value = p;
-        opt.textContent = p;
-        if (lastUse[p] && lastUse[p] >= threeDaysAgo) opt.style.fontWeight = 'bold';
+        const isNew = projectDates && projectDates[p] && (Date.now() - projectDates[p] < 7 * 24 * 60 * 60 * 1000);
+        opt.textContent = isNew ? p + ' 🆕' : p;
+        opt.style.fontWeight = 'bold';
+        if (isNew) opt.style.color = '#059669';
         projectSelect.appendChild(opt);
     });
 }

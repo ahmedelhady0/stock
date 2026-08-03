@@ -117,8 +117,10 @@ async function loadSetupData(forceRefresh = false) {
         sorted.forEach(p => {
             const opt = document.createElement('option');
             opt.value = p;
-            opt.textContent = p;
-            if (recentProjects.has(p)) opt.style.fontWeight = 'bold';
+            const isNew = data.projectDates && data.projectDates[p] && (Date.now() - data.projectDates[p] < 7 * 24 * 60 * 60 * 1000);
+            opt.textContent = isNew ? p + ' 🆕' : p;
+            opt.style.fontWeight = 'bold';
+            if (isNew) opt.style.color = '#059669';
             projSelect.appendChild(opt);
         });
 
