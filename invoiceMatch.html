@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مطابقة الفواتير - مخزن شركة العزل</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="p-4 md:p-8 min-h-screen">
+    <div class="container p-6 md:p-8 w-full max-w-3xl mx-auto fade-in">
+        <a href="home.html" class="back-link">→ رجوع للرئيسية</a>
+
+        <div class="flex justify-between items-center mb-2">
+            <h1 class="text-2xl title-gradient">مطابقة الفواتير</h1>
+            <button id="refreshBtn" class="px-4 py-2 rounded-xl border-2 border-gray-300 text-gray-500 hover:bg-gray-100 transition">⟳ تحديث</button>
+        </div>
+        <p class="text-sm text-gray-500 mb-5">الفاتورة تُقفل (✓) لما كل الأصناف بتاعتها تكون متصرفة أو مرجعة بالكامل. الرصيد يقارن بإجمالي المبالغ "مع ضريبة" اللي مكتوب في الشيت.</p>
+
+        <div class="grid grid-cols-3 gap-3 mb-5">
+            <div class="section-card p-4 text-center">
+                <div class="text-2xl font-bold" style="color:#4CAF50;" id="statClosed">0</div>
+                <div class="text-xs text-gray-500 font-semibold">مقفولة ✓</div>
+            </div>
+            <div class="section-card p-4 text-center">
+                <div class="text-2xl font-bold" style="color:#F59E0B;" id="statOpen">0</div>
+                <div class="text-xs text-gray-500 font-semibold">باقي عليها ✗</div>
+            </div>
+            <div class="section-card p-4 text-center">
+                <div class="text-2xl font-bold" style="color:#E53935;" id="statRemaining">0</div>
+                <div class="text-xs text-gray-500 font-semibold">إجمالي المتبقي (ر.س)</div>
+            </div>
+        </div>
+
+        <div class="flex gap-2 mb-5 overflow-x-auto pb-1">
+            <button class="filter-btn active" data-filter="all">الكل</button>
+            <button class="filter-btn" data-filter="closed">مقفولة ✓</button>
+            <button class="filter-btn" data-filter="open">باقي عليها ✗</button>
+            <span class="flex-1"></span>
+            <select id="supplierFilter" class="input-field px-3 py-2 text-sm">
+                <option value="">كل الموردين</option>
+            </select>
+        </div>
+
+        <div id="invoiceList">
+            <p class="text-center text-gray-500 text-sm">جاري التحميل...</p>
+        </div>
+    </div>
+
+    <div id="messageBox" class="fixed inset-0 modal-backdrop hidden items-center justify-center p-4">
+        <div class="modal-content p-6 shadow-xl w-full max-w-sm text-center">
+            <p id="messageText" class="text-gray-800 font-medium mb-4">رسالة النظام تظهر هنا</p>
+            <button id="closeMessageBtn" class="w-full py-2 px-4 btn-primary text-sm font-medium">إغلاق</button>
+        </div>
+    </div>
+
+    <style>
+        .filter-btn {
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            background: white;
+            border: 2px solid #e0e0e0;
+            color: #666;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .filter-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: transparent;
+        }
+        .invoice-item {
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            overflow: hidden;
+            transition: border-color 0.2s;
+        }
+        .invoice-item:hover {
+            border-color: #667eea;
+        }
+        .invoice-header-pad {
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            cursor: pointer;
+        }
+        .invoice-body {
+            border-top: 1px solid #eee;
+            padding: 10px 16px;
+        }
+        .inv-amount { font-weight: 800; }
+        .inv-remaining.ok { color: #4CAF50; }
+        .inv-remaining.notok { color: #E53935; }
+    </style>
+
+    <script type="module" src="invoiceMatch.js"></script>
+</body>
+</html>

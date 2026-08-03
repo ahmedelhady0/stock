@@ -217,6 +217,11 @@ window.submitReceipt = async function submitReceipt() {
         return;
     }
 
+    if (!invoice) {
+        showMessage('⚠️ رقم الفاتورة إجباري — اكتبه من الفاتورة؟ الرقم لازم عشان صفحة مطابقة الفواتير تحسب المصروف');
+        return;
+    }
+
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span class="spinner"></span> جاري الحفظ...';
 
