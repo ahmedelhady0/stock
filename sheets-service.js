@@ -47,7 +47,9 @@ function bustCache(key) {
 // ── القراءة ────────────────────────────────────────────────
 export async function getSetupData(forceRefresh = false) {
     if (forceRefresh) bustCache('cache_setup');
-    return cacheGet('cache_setup', 5 * 60 * 1000, () => callGet({ action: 'getSetupData' }));
+    return cacheGet('cache_setup', 5 * 60 * 1000, () =>
+        callGet({ action: 'getSetupData', ...(forceRefresh ? { refresh: 1 } : {}) })
+    );
 }
 
 export async function getMovements(email = null, forceRefresh = false) {

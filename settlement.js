@@ -17,9 +17,16 @@ onAuthStateChanged(auth, async (user) => {
     if (!user) { window.location.href = 'index.html'; return; }
     currentUser = user;
     await loadData();
+    // تحديث تلقائي كل 30 ثانية من غير أي زرار
+    setInterval(() => loadData(true).catch(() => {}), 30000);
 });
 
 async function loadData(forceRefresh = false) {
+    // احفظ اختيارات المشرف الحالية قبل إعادة البناء
+    const savedProject = projectSelect.value;
+    const savedMaterial = materialSelect.value;
+    const savedSupplier = document.getElementById('returnSupplier').value;
+
     try {
         const [movements, setup] = await Promise.all([
             getMovements(null, forceRefresh),
@@ -30,24 +37,27 @@ async function loadData(forceRefresh = false) {
         allSetupProjects = setup.projects || [];
         populateProjects();
         populateSuppliers();
+
+        // أرجع اختيارات المشرف بعد التحديث (لو لسه موجودة)
+        if (savedProject && populateProjectsValues().includes(savedProject)) projectSelect.value = savedProject;
+        if (savedMaterial && [...document.querySelectorAll('#returnMaterial option')].some(o => o.value === savedMaterial)) {
+            materialSelect.value = savedMaterial;
+            updateConsumption();
+        }
+        if (savedSupplier && allSuppliers.includes(savedSupplier)) document.getElementById('returnSupplier').value = savedSupplier;
     } catch (err) {
-        showMessage('فشل تحميل البيانات: ' + err.message);
+        if (forceRefresh) showMessage('فشل تحميل البيانات: ' + err.message);
     }
 }
 
-function populateSuppliers() {
-    const sel = document.getElementById('returnSupplier');
-    sel.innerHTML = '<option value="">اختر المورد...</option>';
-    allSuppliers.forEach(s => {
-        sel.innerHTML += `<option value="${s}">${s}</option>`;
-    });
+function populateProjectsValues() {
+    const fromSetup = allSetupProjects.filter(Boolean);
+    const fromLog = allMovements.map(m => m['المشروع']).filter(Boolean);
+    return [...new Set([...fromSetup, ...fromLog])];
 }
 
 function populateProjects() {
-    // دمج مشاريع الشيت + مشاريع سجل الحركات (حتى اللي مالهوش حركات)
-    const fromSetup = allSetupProjects.filter(Boolean);
-    const fromLog = allMovements.map(m => m['المشروع']).filter(Boolean);
-    const projects = [...new Set([...fromSetup, ...fromLog])];
+    const projects = populateProjectsValues();
 
     const threeDaysAgo = new Date();
     threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);

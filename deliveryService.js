@@ -75,9 +75,16 @@ onAuthStateChanged(auth, async (user) => {
     if (!user) { window.location.href = 'index.html'; return; }
     currentUser = user;
     await loadSetupData();
+    // تحديث تلقائي كل 30 ثانية من غير أي زرار
+    setInterval(() => loadSetupData(true).catch(() => {}), 30000);
 });
 
 async function loadSetupData(forceRefresh = false) {
+    // احفظ اختيارات المشرف الحالية قبل إعادة البناء
+    const savedProject = document.getElementById('matProject').value;
+    const savedPhase = document.getElementById('matPhase').value;
+    const savedSupplier = document.getElementById('matSupplier').value;
+
     try {
         const [data, movements] = await Promise.all([
             getSetupData(forceRefresh),
@@ -121,9 +128,14 @@ async function loadSetupData(forceRefresh = false) {
             supSelect.innerHTML += `<option value="${s}">${s}</option>`;
         });
 
+        // أرجع اختيارات المشرف بعد التحديث (لو لسه موجودة)
+        if (savedProject && [...sorted].includes(savedProject)) projSelect.value = savedProject;
+        if (savedSupplier && (data.suppliers || []).includes(savedSupplier)) supSelect.value = savedSupplier;
+        if (savedPhase) document.getElementById('matPhase').value = savedPhase;
+
     } catch (e) {
         console.error('Load error:', e);
-        showMessage('فشل تحميل البيانات من الشيت: ' + e.message);
+        if (forceRefresh) showMessage('فشل تحميل البيانات من الشيت: ' + e.message);
     }
 }
 
