@@ -79,6 +79,20 @@ export async function getEditRequests(status = null) {
     return data.requests || [];
 }
 
+export async function getAdvanceMovements(supervisor = null) {
+    const data = await callGet({ action: 'getAdvanceMovements',
+        ...((supervisor && supervisor !== 'الكل') ? { supervisor } : {}) });
+    return data.movements || [];
+}
+
+export async function logAdvanceExpense(data) {
+    return callPost({ action: 'logAdvanceExpense', ...data });
+}
+
+export async function depositAdvance(data) {
+    return callPost({ action: 'depositAdvance', ...data });
+}
+
 export async function generateWafeqEntry(invoice) {
     return callPost({ action: 'generateWafeqEntry', invoice });
 }
