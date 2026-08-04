@@ -79,6 +79,15 @@ export async function getEditRequests(status = null) {
     return data.requests || [];
 }
 
+export async function generateWafeqEntry(invoice) {
+    return callPost({ action: 'generateWafeqEntry', invoice });
+}
+
+export async function getWafeqGenerated() {
+    const data = await callPost({ action: 'getWafeqGenerated' });
+    return (data && data.invoices) || [];
+}
+
 export async function getAllRequestsLog() {
     const data = await callGet({ action: 'getAllRequestsLog' });
     return data.log || [];

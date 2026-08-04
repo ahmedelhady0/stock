@@ -1,10 +1,11 @@
 import { auth, showMessage, hideMessage, formatDate } from './firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getMovements } from './sheets-service.js';
+import { getMovements, generateWafeqEntry, getWafeqGenerated } from './sheets-service.js';
 
 let allInvoices = [];
 let currentFilter = 'all';
 let currentSupplier = '';
+let generatedInvoices = new Set(); // فواتير اتولّد قيودها قبل كده
 
 const invoiceList = document.getElementById('invoiceList');
 
@@ -41,6 +42,7 @@ document.getElementById('refreshBtn').addEventListener('click', async () => {
 onAuthStateChanged(auth, async (user) => {
     if (!user) { window.location.href = 'index.html'; return; }
     try {
+        generatedInvoices = new Set(await getWafeqGenerated());
         await loadInvoices();
     } catch (err) {
         invoiceList.innerHTML = `<p class="text-red-500 text-center mt-8">تعذر تحميل البيانات: ${err.message}</p>`;
@@ -58,9 +60,11 @@ function loadInvoices(forceRefresh = false) {
 
         (movements || []).forEach(m => {
             const inv = String(m['رقم الفاتورة'] || '').trim();
-            const project = String(m['المشروع'] || '');
-            // الحركات من المستودع للتوزيع لاحقاً — مش جزء من فاتورة مورد مباشرة
-            if (project === 'المستودع' && inv === '') return;
+            const face = String(m['وجهة الاستلام / الإرجاع'] || '').trim();
+            const isFromWarehouse = face === 'المستودع';
+
+            // التوزيع من المستودع بدون رقم فاتورة — مش بنعرف نقفله على أي فاتورة
+            if (isFromWarehouse && !inv) return;
 
             if (!inv) { noInvoice.push(m); return; }
 
@@ -68,14 +72,16 @@ function loadInvoices(forceRefresh = false) {
                 invoice: inv,
                 supplier: '',
                 items: [],
+                receivedQty: 0,   // وارد من الشراء (غير المستودع)
+                consumedQty: 0,   // مصروف + مرتجع (كل صفوف الفاتورة)
                 total: 0,
                 closedAmt: 0
             };
 
             const g = groups[inv];
             const supplier = String(m['وجهة الاستلام / الإرجاع'] || '').trim();
-            if (supplier && g.supplier && g.supplier !== supplier) g.supplier += ' / ' + supplier;
-            else if (supplier) g.supplier = supplier;
+            if (supplier && supplier !== 'المستودع' && g.supplier && g.supplier !== supplier) g.supplier += ' / ' + supplier;
+            else if (supplier && supplier !== 'المستودع') g.supplier = supplier;
 
             const qtyIn = toNum(m['وارد (استلام)']);
             const qtyOut = toNum(m['مصروف على المشروع']);
@@ -87,9 +93,14 @@ function loadInvoices(forceRefresh = false) {
             const balance = qtyIn - qtyOut - retStore - retSupplier;
             const closed = balance <= 0.0001; // اتسلم بالكامل اتصرّف/ارتجع بالكامل
 
-            g.items.push({ m, qtyIn, qtyOut, retStore, retSupplier, amount, amountNoTax, balance, closed });
-            g.total += amount;
-            if (closed) g.closedAmt += amount;
+            if (!isFromWarehouse) {
+                g.receivedQty += qtyIn;
+                g.total += amount;
+                if (closed) g.closedAmt += amount;
+            }
+            g.consumedQty += qtyOut + retStore + retSupplier;
+
+            g.items.push({ m, qtyIn, qtyOut, retStore, retSupplier, amount, amountNoTax, balance, closed, isFromWarehouse });
         });
 
         allInvoices = Object.values(groups).sort((a, b) => a.invoice.localeCompare(b.invoice));
@@ -100,7 +111,7 @@ function loadInvoices(forceRefresh = false) {
         if (noInvoice.length > 0) {
             const div = document.createElement('div');
             div.className = 'bg-amber-50 border border-amber-200 text-amber-800 text-sm font-semibold p-3 rounded-xl mb-4 text-center';
-            div.textContent = `⚠️ فيه ${noInvoice.length} حركة بدون رقم فاتورة — مش متضمنة في المطابقة. صيّرها من سجل الحركة.`;
+            div.textContent = `⚠️ فيه ${noInvoice.length} حركة بدون رقم فاتورة — مش متضمنة في المطابقة.`;
             invoiceList.prepend(div);
         }
     });
@@ -121,14 +132,24 @@ function populateSuppliers() {
 }
 
 function renderInvoices() {
+    // إجمالي المصروف النسبي (كمية/قيمة) لكل فاتورة — يقفل لما المصروف يغطي الوارد
+    const invStatus = g => {
+        const { receivedQty, consumedQty, total } = g;
+        const fraction = receivedQty > 0 ? consumedQty / receivedQty : (total > 0 ? 0 : 1);
+        return {
+            closed: fraction >= 0.999 || total <= 0.0001,
+            remaining: total * Math.max(0, 1 - Math.min(1, fraction))
+        };
+    };
+
     let filtered = allInvoices;
-    if (currentFilter === 'closed') filtered = filtered.filter(g => (g.total - g.closedAmt) <= 0.0001);
-    if (currentFilter === 'open') filtered = filtered.filter(g => (g.total - g.closedAmt) > 0.0001);
+    if (currentFilter === 'closed') filtered = filtered.filter(g => invStatus(g).closed);
+    if (currentFilter === 'open') filtered = filtered.filter(g => !invStatus(g).closed);
     if (currentSupplier) filtered = filtered.filter(g => g.supplier.split(' / ').includes(currentSupplier));
 
-    const closedCount = allInvoices.filter(g => (g.total - g.closedAmt) <= 0.0001).length;
+    const closedCount = allInvoices.filter(g => invStatus(g).closed).length;
     const openCount = allInvoices.length - closedCount;
-    const remainingTotal = allInvoices.reduce((s, g) => s + (g.total - g.closedAmt), 0);
+    const remainingTotal = allInvoices.reduce((s, g) => s + invStatus(g).remaining, 0);
 
     document.getElementById('statClosed').textContent = closedCount;
     document.getElementById('statOpen').textContent = openCount;
@@ -141,8 +162,8 @@ function renderInvoices() {
 
     invoiceList.innerHTML = '';
     filtered.forEach(g => {
-        const remaining = g.total - g.closedAmt;
-        const isClosed = remaining <= 0.0001;
+        const st = invStatus(g);
+        const isClosed = st.closed;
 
         const card = document.createElement('div');
         card.className = 'invoice-item bg-white';
@@ -153,9 +174,14 @@ function renderInvoices() {
                         <span class="text-base font-bold" style="color:#6B2D8B;">فاتورة رقم: ${g.invoice}</span>
                         ${isClosed
                             ? '<span class="text-xs font-bold text-white px-2 py-0.5 rounded-full" style="background:#4CAF50;">✓ مقفولة</span>'
-                            : `<span class="text-xs font-bold text-white px-2 py-0.5 rounded-full" style="background:#F59E0B;">✗ باقي ${remaining.toFixed(2)} ر.س</span>`}
+                            : `<span class="text-xs font-bold text-white px-2 py-0.5 rounded-full" style="background:#F59E0B;">✗ باقي ${st.remaining.toFixed(2)} ر.س</span>`}
                     </div>
-                    <p class="text-xs text-gray-500 mt-1">المورد: ${g.supplier || 'غير محدد'} • الأصناف: ${g.items.length} • القيمة: <span class="font-bold">${g.total.toFixed(2)}</span> ر.س</p>
+                    <p class="text-xs text-gray-500 mt-1">المورد: ${g.supplier || 'غير محدد'} • الأصناف: ${g.items.length} • القيمة: <span class="font-bold">${g.total.toFixed(2)}</span> ر.س • مصروف: ${g.consumedQty} / وارد: ${g.receivedQty}</p>
+                    <div class="mt-2">
+                        ${generatedInvoices.has(g.invoice)
+                            ? '<span class="text-xs font-bold text-white px-3 py-1 rounded-full" style="background:#10B981;">🧾 القيد اتولّد ✓</span>'
+                            : `<button class="gen-entry-btn text-xs font-bold text-white px-3 py-1 rounded-full" style="background:#6B2D8B;" data-invoice="${g.invoice}">🧾 توليد قيد وافق</button>`}
+                    </div>
                 </div>
                 <span class="text-gray-400 text-sm">▼</span>
             </div>
@@ -176,7 +202,7 @@ function renderInvoices() {
                         ${g.items.map(it => `
                             <tr class="border-t border-gray-100">
                                 <td class="py-1.5">${formatDate(it.m['التاريخ'])}</td>
-                                <td class="py-1.5">${it.m['المشروع'] || ''}</td>
+                                <td class="py-1.5">${it.m['المشروع'] || ''} ${it.isFromWarehouse ? '<span class="text-xs" style="color:#2196F3;">(من المستودع)</span>' : ''}</td>
                                 <td class="py-1.5">${it.m['المادة'] || ''}</td>
                                 <td class="py-1.5 text-center">${it.qtyIn} ${it.m['الوحدة'] || ''}</td>
                                 <td class="py-1.5 text-center">${it.qtyOut}</td>
@@ -203,6 +229,28 @@ function renderInvoices() {
         header.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); } });
 
         invoiceList.appendChild(card);
+    });
+
+    // توليد قيد وافق
+    invoiceList.querySelectorAll('.gen-entry-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const invoice = btn.dataset.invoice;
+            btn.disabled = true;
+            btn.textContent = '⏳ جاري التوليد...';
+            try {
+                const res = await generateWafeqEntry(invoice);
+                if (res && res.ok === false) throw new Error(res.error || 'فشل التوليد');
+                generatedInvoices.add(invoice);
+                showMessage(`✅ اتولّد قيد الفاتورة ${invoice} — ${res.total || ''} ر.س في شيت قيود وافق`);
+                setTimeout(() => hideMessage(), 2500);
+                renderInvoices();
+            } catch (err) {
+                showMessage('❌ ' + err.message);
+                btn.disabled = false;
+                btn.textContent = '🧾 توليد قيد وافق';
+            }
+        });
     });
 }
 
