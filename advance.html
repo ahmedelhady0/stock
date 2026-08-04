@@ -3,121 +3,205 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>العهدة</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>العهدة - مخزن شركة العزل</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        .stat-card {
+            position: relative;
+            overflow: hidden;
+            border-radius: 18px;
+            padding: 20px;
+            color: white;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+            border: none;
+        }
+        .stat-card:hover { transform: translateY(-3px); box-shadow: 0 16px 36px rgba(0, 0, 0, 0.2); }
+        .stat-card .stat-icon { font-size: 28px; margin-bottom: 6px; }
+        .stat-card .stat-value { font-size: 24px; font-weight: 800; line-height: 1.3; }
+        .stat-card .stat-label { font-size: 12px; font-weight: 600; opacity: 0.9; }
+        .stat-deposit { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .stat-expense { background: linear-gradient(135deg, #f43f5e 0%, #dc2626 100%); }
+        .stat-remaining { background: linear-gradient(135deg, #34d399 0%, #059669 100%); }
+        .stat-negative { background: linear-gradient(135deg, #f97316 0%, #dc2626 100%); }
+
+        .type-badge {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 20px;
+            color: white;
+        }
+        .badge-deposit { background: linear-gradient(135deg, #34d399, #059669); }
+        .badge-expense { background: linear-gradient(135deg, #f43f5e, #dc2626); }
+
+        .form-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-bottom: 14px;
+            border-bottom: 2px solid rgba(102, 126, 234, 0.15);
+        }
+        .form-header-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            font-size: 20px;
+        }
+
+        .empty-hint {
+            border: 2px dashed rgba(102, 126, 234, 0.25);
+            border-radius: 12px;
+            padding: 10px 14px;
+            background: rgba(102, 126, 234, 0.04);
+        }
+
+        .report-table td { vertical-align: middle; }
+
         @media print {
+            body > *:not(#printSection) { display: block !important; }
             body * { visibility: hidden; }
             #printArea, #printArea * { visibility: visible; }
-            #printArea { position: absolute; inset: 0; padding: 16px; }
+            #printArea { position: absolute !important; inset: 0; padding: 16px; background: white; }
             .no-print { display: none !important; }
+            #printHeader { display: block !important; }
         }
     </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
-    <div class="max-w-4xl mx-auto p-4">
+<body class="p-4 md:p-8 min-h-screen">
+    <div class="container p-6 md:p-8 w-full max-w-4xl mx-auto fade-in">
 
-        <a href="home.html" class="back-link">← العودة للرئيسية</a>
-
-        <div class="flex items-center justify-between mb-4 no-print">
-            <h1 class="text-2xl font-bold text-indigo-900">💰 العهدة</h1>
-            <button id="printBtn" class="btn-primary">🖨️ طباعة السجل</button>
+        <!-- ═══ الهيدر ═══ -->
+        <div class="flex flex-wrap justify-between items-center mb-2 no-print">
+            <div>
+                <a href="home.html" class="back-link">→ رجوع للرئيسية</a>
+                <h1 class="text-2xl title-gradient">💰 العهدة</h1>
+                <p id="headerSub" class="text-sm text-gray-500 mt-1">سجل صرف العهد ومتابعة المتبقي</p>
+            </div>
+            <button id="printBtn" class="px-5 py-2.5 btn-primary text-sm font-bold rounded-xl">
+                🖨️ طباعة السجل
+            </button>
         </div>
         <h1 id="printTitle" class="text-xl font-bold text-indigo-900 mb-4 hidden">سجل العهدة</h1>
 
         <!-- ═══ قسم المهندس: اختيار المشرف + الإيداع ═══ -->
-        <div id="adminSection" class="section-card hidden no-print">
-            <h2 class="text-lg font-bold text-indigo-900 mb-3">⚙️ إدارة العهدة</h2>
-            <div class="mb-3">
-                <label class="block text-sm font-medium text-gray-700 mb-1">المشرف</label>
-                <select id="supervisorSelect" class="input-field">
-                    <option value="">— اختر المشرف —</option>
-                </select>
+        <div id="adminSection" class="section-card p-5 mb-6 hidden no-print" style="border:2px dashed rgba(102,126,234,0.25);">
+            <div class="form-header mb-4">
+                <span class="form-header-icon" style="background:linear-gradient(135deg,#667eea,#764ba2);">⚙️</span>
+                <div class="flex-1">
+                    <h2 class="font-bold text-indigo-900 text-lg">إدارة العهدة</h2>
+                    <p class="text-xs text-gray-500">خاص بالمهندس فقط — إضافة إيداعات لأي مشرف</p>
+                </div>
             </div>
-            <form id="depositForm" class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+            <form id="depositForm" class="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">المبلغ (ر.س)</label>
-                    <input type="number" id="depositAmount" class="input-field" min="0" step="0.01" required placeholder="0.00">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">👤 المشرف</label>
+                    <select id="supervisorSelect" class="input-field px-3 py-2.5">
+                        <option value="">— اختر المشرف —</option>
+                    </select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">الوصف</label>
-                    <input type="text" id="depositDesc" class="input-field" placeholder="مثال: إيداع عهدة للمشروع الجديد">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">💵 المبلغ (ر.س)</label>
+                    <input type="number" id="depositAmount" class="input-field px-3 py-2.5" min="0" step="0.01" required placeholder="0.00">
                 </div>
-                <div class="sm:col-span-2">
-                    <button type="submit" class="btn-primary w-full">➕ إيداع عهدة</button>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">📝 الوصف</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="depositDesc" class="input-field px-3 py-2.5 flex-1" placeholder="مثال: إيداع عهدة">
+                        <button type="submit" class="btn-primary px-5 font-bold whitespace-nowrap">إيداع ➕</button>
+                    </div>
                 </div>
             </form>
         </div>
 
         <!-- ═══ كروت الملخص ═══ -->
         <div id="summarySection" class="hidden">
-            <div class="grid grid-cols-3 gap-3 mb-4">
-                <div class="section-card text-center !p-4">
-                    <p class="text-xs text-gray-500 mb-1">إجمالي العهدة</p>
-                    <p id="totalDeposit" class="text-xl font-bold text-indigo-700">0.00</p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                <div class="stat-card stat-deposit">
+                    <div class="stat-icon">🏦</div>
+                    <div class="stat-value" id="totalDeposit">0.00</div>
+                    <div class="stat-label">إجمالي العهدة</div>
                 </div>
-                <div class="section-card text-center !p-4">
-                    <p class="text-xs text-gray-500 mb-1">إجمالي المصروف</p>
-                    <p id="totalExpense" class="text-xl font-bold text-red-600">0.00</p>
+                <div class="stat-card stat-expense">
+                    <div class="stat-icon">💸</div>
+                    <div class="stat-value" id="totalExpense">0.00</div>
+                    <div class="stat-label">إجمالي المصروف</div>
                 </div>
-                <div class="section-card text-center !p-4">
-                    <p class="text-xs text-gray-500 mb-1">المتبقي</p>
-                    <p id="remaining" class="text-xl font-bold text-emerald-600">0.00</p>
+                <div class="stat-card stat-remaining" id="remainingCard">
+                    <div class="stat-icon">🪙</div>
+                    <div class="stat-value" id="remaining">0.00</div>
+                    <div class="stat-label">المتبقي</div>
                 </div>
             </div>
-            <div id="negativeAlert" class="hidden bg-red-50 border border-red-300 text-red-700 text-sm font-semibold rounded-lg p-3 mb-4 text-center">
+            <div id="negativeAlert" class="hidden mb-4 p-3 rounded-xl text-sm font-bold text-white text-center pulse-animation" style="background:linear-gradient(135deg,#f43f5e,#dc2626);">
                 ⚠️ المتبقي أقل من صفر — العهدة ناقصة!
             </div>
         </div>
 
         <!-- ═══ فورم صرف ═══ -->
-        <div class="section-card mb-4 no-print">
-            <h2 class="text-lg font-bold text-indigo-900 mb-3">🧾 تسجيل صرف</h2>
-            <form id="expenseForm" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="section-card p-5 mb-6 no-print">
+            <div class="form-header mb-4">
+                <span class="form-header-icon" style="background:linear-gradient(135deg,#f43f5e,#dc2626);">🧾</span>
+                <div class="flex-1">
+                    <h2 class="font-bold text-indigo-900 text-lg">تسجيل صرف</h2>
+                    <p class="text-xs text-gray-500">سجل أي مبلغ تم صرفه من العهدة</p>
+                </div>
+            </div>
+            <form id="expenseForm" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">التاريخ</label>
-                    <input type="date" id="expenseDate" class="input-field" required>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">📅 التاريخ</label>
+                    <input type="date" id="expenseDate" class="input-field px-3 py-2.5 w-full" required>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">المبلغ (ر.س)</label>
-                    <input type="number" id="expenseAmount" class="input-field" min="0" step="0.01" required placeholder="0.00">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">💵 المبلغ (ر.س)</label>
+                    <input type="number" id="expenseAmount" class="input-field px-3 py-2.5 w-full" min="0" step="0.01" required placeholder="0.00">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">رقم الفاتورة</label>
-                    <input type="text" id="expenseInvoice" class="input-field" placeholder="اختياري">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">🧾 رقم الفاتورة</label>
+                    <input type="text" id="expenseInvoice" class="input-field px-3 py-2.5 w-full" placeholder="اختياري">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">المشروع <span class="text-xs text-gray-400">(اختياري)</span></label>
-                    <select id="expenseProject" class="input-field">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">📁 المشروع <span class="text-xs text-gray-400">(اختياري)</span></label>
+                    <select id="expenseProject" class="input-field px-3 py-2.5 w-full">
                         <option value="">بدون مشروع</option>
                     </select>
                 </div>
                 <div class="sm:col-span-2">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">الوصف</label>
-                    <input type="text" id="expenseDesc" class="input-field" placeholder="مثال: مواد تنظيف للموقع" required>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">📝 الوصف</label>
+                    <input type="text" id="expenseDesc" class="input-field px-3 py-2.5 w-full" placeholder="مثال: مواد تنظيف للموقع" required>
                 </div>
                 <div class="sm:col-span-2">
-                    <button type="submit" class="btn-primary w-full">💸 تسجيل الصرف</button>
+                    <button type="submit" class="btn-primary w-full py-3 font-bold">💸 تسجيل الصرف</button>
                 </div>
             </form>
         </div>
 
         <!-- ═══ الفلترة ═══ -->
-        <div class="section-card mb-4 no-print">
-            <h2 class="text-lg font-bold text-indigo-900 mb-3">🔍 فلترة السجل</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div class="section-card p-5 mb-6 no-print">
+            <div class="form-header mb-4">
+                <span class="form-header-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706);">🔍</span>
+                <div class="flex-1">
+                    <h2 class="font-bold text-indigo-900 text-lg">فلترة السجل</h2>
+                    <p class="text-xs text-gray-500">صفي الحركات بالتاريخ أو المشروع</p>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">من تاريخ</label>
-                    <input type="date" id="filterFrom" class="input-field">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">من تاريخ</label>
+                    <input type="date" id="filterFrom" class="input-field px-3 py-2.5 w-full">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">إلى تاريخ</label>
-                    <input type="date" id="filterTo" class="input-field">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">إلى تاريخ</label>
+                    <input type="date" id="filterTo" class="input-field px-3 py-2.5 w-full">
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-1">المشروع</label>
-                    <select id="filterProject" class="input-field">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1.5">المشروع</label>
+                    <select id="filterProject" class="input-field px-3 py-2.5 w-full">
                         <option value="">الكل</option>
                     </select>
                 </div>
@@ -126,30 +210,42 @@
 
         <!-- ═══ السجل ═══ -->
         <div id="printArea" class="hidden">
-            <div id="printHeader" class="text-center mb-3 hidden">
+            <div id="printHeader" class="text-center mb-4 hidden">
                 <p class="text-lg font-bold text-gray-800">سجل حركات العهدة — <span id="printName"></span></p>
                 <p class="text-xs text-gray-500">شركة صلابة الأركان للعزل</p>
+                <p class="text-xs text-gray-400">التاريخ: <span id="printDateSpan"></span></p>
             </div>
-            <div class="section-card overflow-x-auto">
-                <table class="w-full text-sm">
+            <div class="section-card p-4 overflow-x-auto">
+                <h2 class="font-bold text-indigo-900 mb-3 no-print">📋 سجل الحركات</h2>
+                <table class="report-table">
                     <thead>
-                        <tr class="text-right text-gray-500 border-b">
-                            <th class="py-2 px-2">التاريخ</th>
-                            <th class="py-2 px-2">المشروع</th>
-                            <th class="py-2 px-2">الوصف</th>
-                            <th class="py-2 px-2">رقم الفاتورة</th>
-                            <th class="py-2 px-2 text-left">المبلغ</th>
+                        <tr>
+                            <th>التاريخ</th>
+                            <th>المشروع</th>
+                            <th>الوصف</th>
+                            <th>رقم الفاتورة</th>
+                            <th>النوع</th>
+                            <th>المبلغ</th>
                         </tr>
                     </thead>
                     <tbody id="movementsList"></tbody>
                 </table>
-                <div id="movementsEmpty" class="text-center text-gray-400 py-6 text-sm hidden">لا توجد حركات</div>
-                <div id="logTotals" class="border-t mt-2 pt-2 hidden">
-                    <p class="text-sm text-gray-600">إجمالي المصروف في العرض: <b id="logExpenseTotal" class="text-red-600"></b></p>
+                <div id="movementsEmpty" class="text-center text-gray-400 py-6 text-sm hidden">لا توجد حركات في هذه الفترة</div>
+                <div id="logTotals" class="mt-3 pt-3 border-t border-gray-100 hidden">
+                    <p class="text-sm text-gray-600">إيداعات في العرض: <b id="logDepositTotal" class="text-emerald-600"></b>
+                        &nbsp;|&nbsp; مصروف في العرض: <b id="logExpenseTotal" class="text-red-600"></b></p>
                 </div>
             </div>
         </div>
 
+    </div>
+
+    <!-- مودال الرسائل -->
+    <div id="messageBox" class="fixed inset-0 modal-backdrop hidden items-center justify-center p-4">
+        <div class="modal-content p-6 shadow-xl w-full max-w-sm text-center">
+            <p id="messageText" class="text-gray-800 font-medium mb-4">رسالة النظام تظهر هنا</p>
+            <button id="closeMessageBtn" class="w-full py-2 px-4 btn-primary text-sm font-medium">إغلاق</button>
+        </div>
     </div>
 
     <script type="module" src="advance.js"></script>

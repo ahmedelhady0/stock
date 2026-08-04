@@ -14,6 +14,8 @@ const filterProject = document.getElementById('filterProject');
 const movementsList = document.getElementById('movementsList');
 const movementsEmpty = document.getElementById('movementsEmpty');
 const logTotals = document.getElementById('logTotals');
+const headerSub = document.getElementById('headerSub');
+const remainingCard = document.getElementById('remainingCard');
 document.getElementById('closeMessageBtn')?.addEventListener('click', hideMessage);
 
 let currentEmail = null;
@@ -46,8 +48,7 @@ onAuthStateChanged(auth, async (user) => {
     }
 
     await loadProjects();
-    const expenseForm = document.getElementById('expenseForm');
-    expenseForm.addEventListener('submit', handleExpenseSubmit);
+    document.getElementById('expenseForm').addEventListener('submit', handleExpenseSubmit);
     document.getElementById('depositForm').addEventListener('submit', handleDepositSubmit);
     document.getElementById('filterFrom').addEventListener('input', renderMovements);
     document.getElementById('filterTo').addEventListener('input', renderMovements);
@@ -96,61 +97,61 @@ function renderMovements() {
     const from = document.getElementById('filterFrom').value;
     const to = document.getElementById('filterTo').value;
     const project = filterProject.value;
+    const supervisorName = isAdmin ? supervisorSelect.value : currentUsername;
 
     let list = [...allMovements].sort((a, b) => new Date(b.date) - new Date(a.date));
-
     if (from) list = list.filter(m => new Date(m.date) >= new Date(from));
     if (to) list = list.filter(m => new Date(m.date) <= new Date(to));
     if (project) list = list.filter(m => m.project === project);
 
-    const totals = {
-        deposit: 0,
-        expense: 0
-    };
-    allMovements.forEach(m => {
-        if (m.type === 'إيداع عهدة') totals.deposit += Number(m.amount) || 0;
-        else totals.expense += Number(m.amount) || 0;
-    });
-    const remaining = totals.deposit - totals.expense;
+    const isDeposit = m => m.type === 'إيداع عهدة';
+    const sum = (arr, pred) => arr.filter(pred).reduce((s, m) => s + (Number(m.amount) || 0), 0);
+    const fmt = n => n.toLocaleString('ar-EG') + ' ر.س';
 
-    document.getElementById('totalDeposit').textContent = totals.deposit.toLocaleString('ar-EG') + ' ر.س';
-    document.getElementById('totalExpense').textContent = totals.expense.toLocaleString('ar-EG') + ' ر.س';
-    const remainingEl = document.getElementById('remaining');
-    remainingEl.textContent = remaining.toLocaleString('ar-EG') + ' ر.س';
-    remainingEl.className = 'text-xl font-bold ' + (remaining < 0 ? 'text-red-600' : 'text-emerald-600');
+    const totalDeposit = sum(allMovements, isDeposit);
+    const totalExpense = sum(allMovements, m => !isDeposit(m));
+    const remaining = totalDeposit - totalExpense;
+
+    document.getElementById('totalDeposit').textContent = fmt(totalDeposit);
+    document.getElementById('totalExpense').textContent = fmt(totalExpense);
+    document.getElementById('remaining').textContent = fmt(remaining);
+
+    remainingCard.classList.remove('stat-remaining', 'stat-negative');
+    remainingCard.classList.add(remaining < 0 ? 'stat-negative' : 'stat-remaining');
     document.getElementById('negativeAlert').classList.toggle('hidden', remaining >= 0);
+
     summarySection.classList.remove('hidden');
     printArea.classList.remove('hidden');
     document.getElementById('printTitle').classList.remove('hidden');
     document.getElementById('printHeader').classList.remove('hidden');
-    document.getElementById('printName').textContent = isAdmin ? supervisorSelect.value : currentUsername;
+    document.getElementById('printName').textContent = supervisorName;
+    document.getElementById('printDateSpan').textContent = formatDate(new Date());
+    headerSub.textContent = `سجل صرف العهد ومتابعة المتبقي — ${supervisorName}`;
 
     movementsList.innerHTML = '';
-    const isDeposit = m => m.type === 'إيداع عهدة';
-    const filtered = list;
-    filtered.forEach(m => {
-        const row = document.createElement('tr');
-        row.className = 'border-b last:border-0';
+    list.forEach(m => {
         const amt = Number(m.amount) || 0;
+        const dep = isDeposit(m);
+        const row = document.createElement('tr');
         row.innerHTML = `
-            <td class="py-2 px-2 whitespace-nowrap">${formatDate(m.date)}</td>
-            <td class="py-2 px-2">${m.project || '-'}</td>
-            <td class="py-2 px-2">${m.description || '-'}</td>
-            <td class="py-2 px-2">${m.invoice || '-'}</td>
-            <td class="py-2 px-2 text-left font-semibold ${isDeposit(m) ? 'text-emerald-600' : 'text-red-600'}">${isDeposit(m) ? '+' : '−'} ${amt.toLocaleString('ar-EG')}</td>
+            <td class="whitespace-nowrap">${formatDate(m.date)}</td>
+            <td>${m.project || '-'}</td>
+            <td>${m.description || '-'}</td>
+            <td class="whitespace-nowrap">${m.invoice || '-'}</td>
+            <td><span class="type-badge ${dep ? 'badge-deposit' : 'badge-expense'}">${dep ? 'إيداع' : 'صرف'}</span></td>
+            <td class="font-bold whitespace-nowrap" style="color:${dep ? '#059669' : '#dc2626'}">${dep ? '+' : '−'} ${amt.toLocaleString('ar-EG')}</td>
         `;
         movementsList.appendChild(row);
     });
-    movementsEmpty.classList.toggle('hidden', filtered.length > 0);
+    movementsEmpty.classList.toggle('hidden', list.length > 0);
 
-    const shownExpense = filtered.filter(m => !isDeposit(m)).reduce((s, m) => s + (Number(m.amount) || 0), 0);
-    const shownDeposit = filtered.filter(isDeposit).reduce((s, m) => s + (Number(m.amount) || 0), 0);
+    const shownDeposit = sum(list, isDeposit);
+    const shownExpense = sum(list, m => !isDeposit(m));
     const hasFilter = from || to || project;
     if (hasFilter) {
         logTotals.classList.remove('hidden');
-        logTotals.innerHTML = `
-            <p class="text-sm text-gray-600">إيداعات في العرض: <b class="text-emerald-600">${shownDeposit.toLocaleString('ar-EG')}</b>
-            &nbsp;|&nbsp; مصروف في العرض: <b class="text-red-600">${shownExpense.toLocaleString('ar-EG')}</b></p>`;
+        document.getElementById('logDepositTotal').textContent = fmt(shownDeposit);
+        document.getElementById('logExpenseTotal').textContent = fmt(shownExpense);
     } else {
         logTotals.classList.add('hidden');
     }
