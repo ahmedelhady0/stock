@@ -76,6 +76,7 @@ function renderSettlementCard(r) {
                 <span class="movement-badge badge-receive">قيد الموافقة</span>
                 <p class="font-bold text-gray-800 mt-2">${r['المادة'] || ''}</p>
                 <p class="text-sm text-gray-600">مقدم الطلب: ${r['مقدم الطلب'] || 'غير محدد'}</p>
+                <p class="text-xs text-gray-400 mt-1" style="direction:ltr;text-align:right;">رقم الحركة: <b class="text-indigo-600">${r['معرف الحركة'] || '—'}</b></p>
             </div>
             <span class="text-xs text-gray-400">${formatDate(r['تاريخ الطلب'])}</span>
         </div>
@@ -134,6 +135,7 @@ function renderEditCard(r) {
                 <p class="font-bold text-gray-800 mt-2">${r['المادة'] || ''}</p>
                 <p class="text-sm text-gray-600">المشروع: ${r['المشروع'] || 'غير محدد'}</p>
                 <p class="text-sm text-gray-600">مقدم الطلب: ${r['مقدم الطلب'] || 'غير محدد'}</p>
+                <p class="text-xs text-gray-400 mt-1" style="direction:ltr;text-align:right;">رقم الحركة: <b class="text-indigo-600">${r['معرف الحركة'] || '—'}</b></p>
             </div>
             <span class="text-xs text-gray-400">${formatDate(r['تاريخ الطلب'])}</span>
         </div>
