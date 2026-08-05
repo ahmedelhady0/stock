@@ -17,6 +17,7 @@
             <button class="filter-btn active" data-filter="all">الكل</button>
             <button class="filter-btn" data-filter="receive">استلام</button>
             <button class="filter-btn" data-filter="return">مرتجع</button>
+            <button class="filter-btn" data-filter="transfer">تحويل</button>
         </div>
 
         <div id="movementsList">
@@ -32,6 +33,32 @@
             <div class="flex gap-3 mt-5">
                 <button id="saveEditBtn" class="btn-primary flex-1 py-3 text-sm font-bold">حفظ التعديل</button>
                 <button id="cancelEditBtn" class="btn-gray flex-1 py-3 text-sm font-bold">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transfer Modal -->
+    <div id="transferModal" class="fixed inset-0 modal-backdrop hidden items-center justify-center p-4 z-50">
+        <div class="modal-content p-6 shadow-xl w-full max-w-md">
+            <h3 class="text-lg font-bold text-gray-800 mb-1 text-center">↔️ تحويل بين المشاريع</h3>
+            <p class="text-xs text-gray-500 text-center mb-4">ينقل الكمية من المشروع الحالي لمشروع آخر فوراً (بدون موافقة)</p>
+            <div id="transferInfo" class="bg-indigo-50 border border-indigo-100 rounded-xl p-3 text-sm text-gray-700 mb-4"></div>
+            <div class="mb-3">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">المشروع الجديد</label>
+                <select id="transferProject" class="input-field w-full p-3"></select>
+            </div>
+            <div class="mb-3">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">الكمية</label>
+                <input type="number" id="transferQty" step="any" min="0" class="input-field w-full p-3 text-center text-lg font-bold" placeholder="0">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">ملاحظات (اختياري)</label>
+                <input type="text" id="transferNotes" class="input-field w-full p-3" placeholder="مثال: نقل لاستكمال الخزان الجديد">
+            </div>
+            <div id="transferError" class="hidden bg-red-50 border border-red-200 text-red-700 text-sm font-semibold p-3 rounded-xl mb-3 text-center"></div>
+            <div class="flex gap-3">
+                <button id="saveTransferBtn" class="btn-primary flex-1 py-3 text-sm font-bold">تأكيد التحويل</button>
+                <button id="cancelTransferBtn" class="btn-gray flex-1 py-3 text-sm font-bold">إلغاء</button>
             </div>
         </div>
     </div>
@@ -74,6 +101,20 @@
         }
         .btn-return-sm:hover {
             background: #FFE0B2;
+        }
+        .btn-transfer-sm {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            margin-right: 6px;
+            background: #EDE7F6;
+            color: #5E35B1;
+        }
+        .btn-transfer-sm:hover {
+            background: #D1C4E9;
         }
     </style>
 

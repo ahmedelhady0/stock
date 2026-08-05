@@ -1,22 +1,25 @@
 import { auth, showMessage, hideMessage, formatDate } from './firebase-config.js';
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getMovements, getEditRequests, submitEditRequest, submitSettlementRequest } from './sheets-service.js';
+import { getMovements, getEditRequests, submitEditRequest, submitSettlementRequest, transferBetweenProjects, getSetupData } from './sheets-service.js';
 
 let allMovements = [];
 let pendingEditKeys = new Set();
 let currentFilter = 'all';
 let currentUserEmail = null;
+let transferProjects = [];
 
 const movementsList = document.getElementById('movementsList');
 const editModal = document.getElementById('editModal');
 const editFormFields = document.getElementById('editFormFields');
 const saveEditBtn = document.getElementById('saveEditBtn');
 const cancelEditBtn = document.getElementById('cancelEditBtn');
+const transferModal = document.getElementById('transferModal');
 
 let editingId = null;
 let editingMaterial = null;
 let isReturnMode = false;
 let returningMovement = null;
+let transferringMovement = null;
 
 document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -34,6 +37,7 @@ function keyOf(idOrObj, material) {
 
 function getType(m) {
     const t = String(m['نوع الحركة'] || m.movementType || '').trim();
+    if (t.indexOf('تحويل') !== -1) return 'transfer';
     if (t.indexOf('مرتجع') !== -1) return 'return';
     if (t === 'صرف مباشر' || t === 'direct') return 'direct';
     if (t === 'وارد مستودع' || t === 'warehouse') return 'warehouse';
@@ -47,16 +51,19 @@ function getType(m) {
 function isReturn(m) { return getType(m) === 'return'; }
 function isDirect(m) { return getType(m) === 'direct'; }
 function isWarehouse(m) { return getType(m) === 'warehouse'; }
+function isTransfer(m) { return getType(m) === 'transfer'; }
 
 onAuthStateChanged(auth, async (user) => {
     if (!user) { window.location.href = 'index.html'; return; }
     currentUserEmail = user.email;
     try {
-        const [movements, pendingEdits] = await Promise.all([
+        const [movements, pendingEdits, setup] = await Promise.all([
             getMovements(),
-            getEditRequests('قيد الموافقة')
+            getEditRequests('قيد الموافقة'),
+            getSetupData()
         ]);
         allMovements = movements;
+        transferProjects = setup.projects || [];
         pendingEditKeys = new Set(pendingEdits.map(r => keyOf(r['معرف الحركة'], r['المادة'])));
         renderMovements();
     } catch (err) {
@@ -78,6 +85,7 @@ function renderMovements() {
     let filtered = allMovements;
     if (currentFilter === 'receive') filtered = allMovements.filter(m => !isReturn(m));
     if (currentFilter === 'return') filtered = allMovements.filter(m => isReturn(m));
+    if (currentFilter === 'transfer') filtered = allMovements.filter(m => isTransfer(m));
 
     const groups = groupByRequest(filtered);
 
@@ -95,6 +103,7 @@ function renderMovements() {
             const ret = isReturn(m);
             const dir = isDirect(m);
             const wh = isWarehouse(m);
+            const tr = isTransfer(m);
             const key = keyOf(m);
             const editPending = pendingEditKeys.has(key);
             const safeMat = encodeURIComponent(m['المادة'] || '');
@@ -106,6 +115,10 @@ function renderMovements() {
                 typeBadge = `<span class="movement-badge badge-return">🔄 مرتجع</span>`;
                 const totalRet = (parseFloat(m['مرتجع للمستودع']) || 0) + (parseFloat(m['مرتجع للمورد']) || 0);
                 qtyDisplay = `${totalRet || m['وارد (استلام)'] || 0}`;
+            } else if (tr) {
+                const isOut = String(m['نوع الحركة'] || '').trim() === 'تحويل خارج';
+                typeBadge = `<span class="movement-badge" style="background:#5E35B1;">↔️ ${isOut ? 'تحويل خارج' : 'تحويل وارد'}</span>`;
+                qtyDisplay = `${isOut ? (m['مرتجع للمستودع'] || 0) : (m['وارد (استلام)'] || 0)}`;
             } else if (dir) {
                 typeBadge = `<span class="movement-badge badge-receive">🚚 صرف مباشر</span>`;
                 const consumed = parseFloat(m['مصروف على المشروع']) || parseFloat(m['وارد (استلام)']) || 0;
@@ -128,17 +141,21 @@ function renderMovements() {
                                 ? `<p class="text-xs text-gray-500 mt-1">
                                     لمستودع: ${m['مرتجع للمستودع'] || 0} • لمورد: ${m['مرتجع للمورد'] || 0}
                                    </p>` : ''}
+                            ${tr && m['وجهة الاستلام / الإرجاع']
+                                ? `<p class="text-xs text-gray-500 mt-1">${m['وجهة الاستلام / الإرجاع']}</p>` : ''}
                         </div>
                     </div>
                     <div class="flex gap-2 mt-2">
-                        ${!ret ? `<button class="btn-return-sm" data-id="${safeId}" data-material="${safeMat}" data-project="${encodeURIComponent(m['المشروع'] || '')}">🔄 مرتجع</button>` : ''}
-                        <button class="btn-edit-sm" data-id="${group.id}" data-material="${safeMat}" ${editPending || ret ? 'disabled' : ''}>✏️ تعديل</button>
+                        ${!ret && !tr ? `<button class="btn-return-sm" data-id="${safeId}" data-material="${safeMat}" data-project="${encodeURIComponent(m['المشروع'] || '')}">🔄 مرتجع</button>` : ''}
+                        ${!ret && !tr ? `<button class="btn-transfer-sm" data-id="${safeId}" data-material="${safeMat}" data-project="${encodeURIComponent(m['المشروع'] || '')}">↔️ تحويل</button>` : ''}
+                        <button class="btn-edit-sm" data-id="${group.id}" data-material="${safeMat}" ${editPending || ret || tr ? 'disabled' : ''}>✏️ تعديل</button>
                     </div>
                 </div>
             `;
         }).join('');
 
         const typeLabel = group.items.some(m => isReturn(m)) ? '🔄 مرتجع' :
+                          group.items.some(m => isTransfer(m)) ? '↔️ تحويل' :
                           group.items.some(m => isDirect(m)) ? '🚚 صرف مباشر' : '🏠 وارد مستودع';
 
         card.innerHTML = `
@@ -167,7 +184,94 @@ function renderMovements() {
             openReturnForm(id, material, project);
         });
     });
+
+    movementsList.querySelectorAll('.btn-transfer-sm').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const id = decodeURIComponent(btn.dataset.id);
+            const material = decodeURIComponent(btn.dataset.material);
+            openTransferForm(id, material);
+        });
+    });
 }
+
+function openTransferForm(id, material) {
+    const m = allMovements.find(x => String(x['ID']) === String(id) && String(x['المادة']) === String(material));
+    if (!m) return;
+
+    transferringMovement = m;
+    const currentProject = m['المشروع'] || '';
+    const received = parseFloat(m['وارد (استلام)']) || 0;
+    const retStore = parseFloat(m['مرتجع للمستودع']) || 0;
+    const retSup = parseFloat(m['مرتجع للمورد']) || 0;
+    const available = Math.max(0, received - retStore - retSup);
+
+    document.getElementById('transferInfo').innerHTML = `
+        <p><b>المادة:</b> ${m['المادة'] || ''} (${m['الوحدة'] || ''})</p>
+        <p><b>المشروع الحالي:</b> ${currentProject}</p>
+        <p><b>المتاح للنقل:</b> <span class="font-bold text-indigo-700">${available}</span> ${m['الوحدة'] || ''}</p>
+    `;
+
+    const select = document.getElementById('transferProject');
+    select.innerHTML = '<option value="">— اختر المشروع الجديد —</option>' +
+        transferProjects.filter(p => p !== currentProject)
+            .map(p => `<option value="${p}">${p}</option>`).join('');
+
+    document.getElementById('transferQty').value = '';
+    document.getElementById('transferNotes').value = '';
+    document.getElementById('transferError').classList.add('hidden');
+    document.getElementById('transferError').textContent = '';
+
+    transferModal.classList.remove('hidden');
+    transferModal.classList.add('flex');
+}
+
+function closeTransferModal() {
+    transferModal.classList.add('hidden');
+    transferModal.classList.remove('flex');
+    transferringMovement = null;
+}
+
+document.getElementById('cancelTransferBtn')?.addEventListener('click', closeTransferModal);
+
+document.getElementById('saveTransferBtn')?.addEventListener('click', async () => {
+    if (!transferringMovement) return;
+    const m = transferringMovement;
+    const target = document.getElementById('transferProject').value;
+    const qty = parseFloat(document.getElementById('transferQty').value) || 0;
+    const notes = document.getElementById('transferNotes').value.trim();
+    const errDiv = document.getElementById('transferError');
+    const showErr = (msg) => { errDiv.textContent = '❌ ' + msg; errDiv.classList.remove('hidden'); };
+
+    const received = parseFloat(m['وارد (استلام)']) || 0;
+    const retStore = parseFloat(m['مرتجع للمستودع']) || 0;
+    const retSup = parseFloat(m['مرتجع للمورد']) || 0;
+    const available = Math.max(0, received - retStore - retSup);
+
+    if (!target) { showErr('اختر المشروع الجديد'); return; }
+    if (!qty || qty <= 0) { showErr('أدخل كمية صحيحة'); return; }
+    if (qty > available) { showErr(`الكمية أكبر من المتاح (${available})`); return; }
+    if (!confirm(`تحويل ${qty} ${m['الوحدة'] || ''} من "${m['المشروع'] || ''}" إلى "${target}"؟`)) return;
+
+    const btn = document.getElementById('saveTransferBtn');
+    btn.disabled = true;
+    btn.textContent = 'جاري التحويل...';
+    try {
+        await transferBetweenProjects({
+            movementId: m['ID'],
+            material: m['المادة'],
+            quantity: qty,
+            targetProject: target,
+            notes,
+            requestedBy: currentUserEmail ? currentUserEmail.split('@')[0] : ''
+        });
+        showMessage('✅ تم التحويل بنجاح');
+        setTimeout(() => location.reload(), 1200);
+    } catch (err) {
+        showErr(err.message);
+        btn.disabled = false;
+        btn.textContent = 'تأكيد التحويل';
+    }
+});
 
 function openReturnForm(id, material, project) {
     const m = allMovements.find(x => String(x['ID']) === String(id) && String(x['المادة']) === String(material));

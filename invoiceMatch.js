@@ -62,6 +62,10 @@ function loadInvoices(forceRefresh = false) {
             const inv = String(m['رقم الفاتورة'] || '').trim();
             const face = String(m['وجهة الاستلام / الإرجاع'] || '').trim();
             const isFromWarehouse = face === 'المستودع';
+            const isTransfer = String(m['نوع الحركة'] || '').trim().indexOf('تحويل') !== -1;
+
+            // التحويلات بين المشاريع مش جزء من الفواتير
+            if (isTransfer) return;
 
             // التوزيع من المستودع بدون رقم فاتورة — مش بنعرف نقفله على أي فاتورة
             if (isFromWarehouse && !inv) return;

@@ -89,6 +89,10 @@ export async function logAdvanceExpense(data) {
     return callPost({ action: 'logAdvanceExpense', ...data });
 }
 
+export async function transferBetweenProjects(data) {
+    return callPost({ action: 'transferBetweenProjects', ...data });
+}
+
 export async function depositAdvance(data) {
     return callPost({ action: 'depositAdvance', ...data });
 }
