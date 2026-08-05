@@ -6,6 +6,7 @@ let currentUser = null;
 let allMaterials = [];
 let movementType = 'direct';
 let allMovements = [];
+let materialMemory = {}; // المادة -> آخر ({invoice, supplier}) من الحركات
 
 const IMGBB_KEY = '8621949d7967c0c66d9ab1290454d70e';
 const IMGBB_ALBUM = '9sJWHv';
@@ -45,6 +46,11 @@ document.addEventListener('DOMContentLoaded', () => {
             movementType = e.target.value;
             updateMovementTypeUI();
         });
+    });
+
+    // كتب كمية لأي مادة → عبّي رقم الفاتورة والمورد من الذاكرة تلقائياً
+    document.getElementById('dynamicMaterialsContainer').addEventListener('input', (e) => {
+        if (e.target.classList.contains('qty-input')) autoFillInvoice();
     });
 });
 
@@ -92,6 +98,7 @@ async function loadSetupData(forceRefresh = false) {
         ]);
         allMovements = movements || [];
         allMaterials = data.materials || [];
+        buildMaterialMemory();
 
         // ترتيب المشاريع: الأحدث استخداماً أولاً (آخر 3 أيام)
         const threeDaysAgo = new Date();
@@ -184,6 +191,52 @@ function handlePhaseChange(e) {
     document.getElementById('submitBtn').disabled = false;
 };
 
+// يبني ذاكرة آخر فاتورة/مورد لكل مادة من الحركات السابقة
+function buildMaterialMemory() {
+    materialMemory = {};
+    (allMovements || []).forEach(m => {
+        const material = String(m['المادة'] || '').trim();
+        if (!material) return;
+        const invoice = String(m['رقم الفاتورة'] || '').trim();
+        const supplier = String(m['وجهة الاستلام / الإرجاع'] || '').trim();
+        if (invoice) materialMemory[material] = {
+            invoice,
+            supplier: supplier === 'المستودع' ? '' : supplier
+        };
+    });
+}
+
+// أول ما المشرف يكتب كمية أي مادة → نعبّي رقم الفاتورة والمورد تلقائياً
+function autoFillInvoice() {
+    const qtyInputs = document.querySelectorAll('.qty-input');
+    let firstMaterial = '';
+    for (const inp of qtyInputs) {
+        if (parseFloat(inp.value) > 0) { firstMaterial = inp.dataset.name; break; }
+    }
+    if (!firstMaterial) return;
+
+    const mem = materialMemory[firstMaterial];
+    if (!mem) return;
+
+    const invoiceInput = document.getElementById('invoiceNo');
+    const supplierSelect = document.getElementById('matSupplier');
+
+    // عبّي الرقم المرة الأولانية بس — لو المشرف غيّره يدوياً متغيّرش عليه
+    if (!invoiceInput.value.trim() && mem.invoice) {
+        invoiceInput.value = mem.invoice;
+        invoiceInput.style.borderColor = '#10B981';
+        setTimeout(() => { invoiceInput.style.borderColor = ''; }, 1500);
+    }
+    if (mem.supplier && manufacturerSuppliers().includes(mem.supplier)) {
+        supplierSelect.value = mem.supplier;
+    }
+}
+
+function manufacturerSuppliers() {
+    const sel = document.getElementById('matSupplier');
+    return [...sel.options].map(o => o.value).filter(Boolean);
+}
+
 window.submitReceipt = async function submitReceipt() {
     const project = document.getElementById('matProject').value;
     const phase = document.getElementById('matPhase').value;
@@ -214,11 +267,6 @@ window.submitReceipt = async function submitReceipt() {
 
     if (items.length === 0) {
         showMessage('أدخل كمية واحدة على الأقل');
-        return;
-    }
-
-    if (!invoice) {
-        showMessage('⚠️ رقم الفاتورة إجباري — اكتبه من الفاتورة؟ الرقم لازم عشان صفحة مطابقة الفواتير تحسب المصروف');
         return;
     }
 
