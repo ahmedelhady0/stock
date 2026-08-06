@@ -23,7 +23,7 @@ export const storage = getStorage(app);
 export const appId = 'warehouse-8edf4';
 export const adminUsername = "admin";
 
-export const PHASES = ["فوم", "رولات", "أسمنتي", "دورات مياه"];
+export const PHASES = ["فوم", "رولات", "أسمنتي", "دورات مياه", "مضاف خرسانة"];
 
 export const DEFAULT_UNITS = {
     "برميل أزرق": "برميل 220كج",

@@ -139,8 +139,11 @@ export async function addProject(name, requesterEmail) {
     return r;
 }
 
-export async function addMaterial(phase, name, unit, requesterEmail) {
-    const r = await callPost({ action: 'addMaterial', phase, name, unit, requesterEmail });
+export async function addMaterial(phase, name, unit, requesterEmail, price) {
+    const r = await callPost({
+        action: 'addMaterial', phase, name, unit, requesterEmail,
+        ...(price !== undefined && price !== '' ? { price } : {})
+    });
     clearCache();
     return r;
 }
